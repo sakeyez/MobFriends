@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:blaze",
+    "minecraft:breeze",
+    "mob_friends:blaze_npc"
+  ]
+}
