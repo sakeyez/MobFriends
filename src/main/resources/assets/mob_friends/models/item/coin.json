@@ -1,1 +1,1 @@
-{ "parent": "item/handheld", "textures": { "layer0": "mob_friends:item/coin" } } 
+{ "parent": "item/generated", "textures": { "layer0": "mob_friends:item/coin" } } 

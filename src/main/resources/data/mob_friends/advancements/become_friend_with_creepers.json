@@ -1,6 +1,6 @@
 {
   "display": {
-    "icon": { "item": "dining:creeper_token" },
+    "icon": { "item": "mob_friends:creeper_token" },
     "title": { "translate": "advancements.factions.friendship.creepers.title" },
     "description": { "translate": "advancements.factions.friendship.creepers.description" },
     "frame": "task",

@@ -1,6 +1,6 @@
 {
   "display": {
-    "icon": { "item": "dining:zombie_token" },
+    "icon": { "item": "mob_friends:zombie_token" },
     "title": { "translate": "advancements.factions.friendship.zombies.title" },
     "description": { "translate": "advancements.factions.friendship.zombies.description" },
     "frame": "task",

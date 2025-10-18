@@ -1,6 +1,6 @@
 {
   "display": {
-    "icon": { "item": "dining:slime_token" },
+    "icon": { "item": "mob_friends:slime_token" },
     "title": { "translate": "advancements.factions.friendship.slimes.title" },
     "description": { "translate": "advancements.factions.friendship.slimes.description" },
     "frame": "task",

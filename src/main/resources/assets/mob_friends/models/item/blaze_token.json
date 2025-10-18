@@ -1,6 +1,6 @@
 {
   "parent": "item/generated",
   "textures": {
-    "layer0": "dining:item/blaze_token"
+    "layer0": "mob_friends:item/blaze_token"
   }
 }

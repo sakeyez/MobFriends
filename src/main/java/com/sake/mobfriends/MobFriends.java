@@ -3,6 +3,7 @@ package com.sake.mobfriends;
 import com.mojang.logging.LogUtils;
 import com.sake.mobfriends.init.ModCreativeTabs;
 import com.sake.mobfriends.init.ModItems;
+import com.sake.mobfriends.init.ModEntities;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import org.slf4j.Logger;
@@ -30,8 +31,6 @@ public class MobFriends {
         // 同理，注册我们的创造模式物品栏
         ModCreativeTabs.register(modEventBus);
 
-        // 你可以在这里添加更多的注册调用，例如方块、实体等
-        // ModBlocks.register(modEventBus);
-        // ModEntities.register(modEventBus);
+        ModEntities.register(modEventBus);
     }
 }

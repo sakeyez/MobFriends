@@ -1,1 +1,34 @@
-{ "language": "zh_cn" }
+{
+  "creativetab.mob_friends_tab": "止戈为友",
+  "itemGroup.mob_friends_tab": "止戈为友",
+  "modid.mob_friends": "止戈为友",
+
+
+  "item.mob_friends.zombie_core": "僵尸核心",
+  "item.mob_friends.broken_zombie_core": "破碎的僵尸核心",
+  "item.mob_friends.wither_core": "凋灵核心",
+  "item.mob_friends.broken_wither_core": "破碎的凋灵核心",
+
+
+  "item.mob_friends.zombie_token": "僵尸的谢意",
+  "item.mob_friends.skeleton_token": "骷髅的谢意",
+  "item.mob_friends.creeper_token": "苦力怕的谢意",
+  "item.mob_friends.enderman_token": "末影人的谢意",
+  "item.mob_friends.slime_token": "史莱姆的谢意",
+  "item.mob_friends.blaze_token": "烈焰人的谢意",
+
+
+  "item.mob_friends.coin": "眸玉",
+  "item.mob_friends.powder": "末影粉",
+
+
+
+  "entity.mob_friends.zombie_npc_entity": "僵尸农夫",
+  "entity.mob_friends.skeleton_npc_entity": "骷髅渔民",
+  "entity.mob_friends.creeper_npc_entity": "苦力怕朋友",
+  "entity.mob_friends.enderman_npc_entity": "末影人朋友",
+  "entity.mob_friends.slime_npc_entity": "史莱姆朋友",
+  "entity.mob_friends.blaze_npc_entity": "烈焰人朋友",
+  "entity.mob_friends.combat_zombie": "僵尸战士",
+  "entity.mob_friends.combat_wither": "凋灵战士"
+}

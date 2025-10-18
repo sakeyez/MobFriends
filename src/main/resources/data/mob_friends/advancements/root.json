@@ -1,7 +1,7 @@
 {
   "display": {
     "icon": {
-      "item": "dining:zombie_token"
+      "item": "mob_friends:zombie_token"
     },
     "title": {
       "translate": "advancements.factions.root.title"

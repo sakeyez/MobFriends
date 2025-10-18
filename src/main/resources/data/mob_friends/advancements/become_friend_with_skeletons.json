@@ -1,6 +1,6 @@
 {
   "display": {
-    "icon": { "item": "dining:skeleton_token" },
+    "icon": { "item": "mob_friends:skeleton_token" },
     "title": { "translate": "advancements.factions.friendship.skeletons.title" },
     "description": { "translate": "advancements.factions.friendship.skeletons.description" },
     "frame": "task",

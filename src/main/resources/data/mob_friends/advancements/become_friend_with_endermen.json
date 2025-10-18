@@ -1,6 +1,6 @@
 {
   "display": {
-    "icon": { "item": "dining:enderman_token" },
+    "icon": { "item": "mob_friends:enderman_token" },
     "title": { "translate": "advancements.factions.friendship.endermen.title" },
     "description": { "translate": "advancements.factions.friendship.endermen.description" },
     "frame": "task",
