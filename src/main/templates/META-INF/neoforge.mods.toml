@@ -1,19 +1,18 @@
-
 modLoader="javafml" #mandatory
-loaderVersion="${loader_version_range}" #mandatory
-license="${mod_license}"
+loaderVersion="[4,)" #mandatory
+license="All Rights Reserved"
 
 [[mods]] #mandatory
-modId="${mod_id}" #mandatory
-version="${mod_version}" #mandatory
-displayName="${mod_name}" #mandatory
-authors="${mod_authors}" #optional
+modId="mob_friends" #mandatory
+version="1.0.0-1.21.1" #mandatory
+displayName="Mob Friends" #mandatory
+authors="sake_yez" #optional
 # The description text for the mod (multi line!) (#mandatory)
-description='''${mod_description}'''
+description='''You can make friends with some mobs.'''
 
 # The [[mixins]] block allows you to declare your mixin config to FML so that it gets loaded.
 [[mixins]]
-config="${mod_id}.mixins.json"
+config="mob_friends.mixins.json"
 
 # The [[accessTransformers]] block allows you to declare where your AT file is.
 # If this block is omitted, a fallback attempt will be made to load an AT from META-INF/accesstransformer.cfg
@@ -23,17 +22,17 @@ config="${mod_id}.mixins.json"
 # The coremods config file path is not configurable and is always loaded from META-INF/coremods.json
 
 # A dependency - use the . to indicate dependency for a specific modid. Dependencies are optional.
-[[dependencies.${mod_id}]]
+[[dependencies.mob_friends]]
 modId="neoforge"
 type="required"
-versionRange="${neo_version_range}"
+versionRange="[21,)" #
 ordering="NONE"
 side="BOTH"
 
 # Here's another dependency
-[[dependencies.${mod_id}]]
+[[dependencies.mob_friends]]
 modId="minecraft"
 type="required"
-versionRange="${minecraft_version_range}"
+versionRange="[1.21.1,1.21.2)" #
 ordering="NONE"
 side="BOTH"
