@@ -1,32 +1,39 @@
 package com.sake.mobfriends;
 
 import com.mojang.logging.LogUtils;
-import com.sake.mobfriends.event.ForgeBus; // <-- 1. 添加导入
+import com.sake.mobfriends.attachments.ModAttachments;
+import com.sake.mobfriends.client.ClientSetup;
+// import com.sake.mobfriends.config.MobFriendsConfig; // <-- 暂时注释掉
 import com.sake.mobfriends.init.ModCreativeTabs;
 import com.sake.mobfriends.init.ModEntities;
 import com.sake.mobfriends.init.ModItems;
+import com.sake.mobfriends.init.ModTriggers; // <-- 确保导入
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
-import net.neoforged.neoforge.common.NeoForge; // <-- 2. 添加导入
+import net.neoforged.fml.loading.FMLLoader;
 import org.slf4j.Logger;
 
 @Mod(MobFriends.MOD_ID)
 public class MobFriends {
     public static final String MOD_ID = "mob_friends";
-    public static final Logger LOGGER = LogUtils.getLogger(); // <-- 3. 将 LOGGER 设为 public static
+    public static final Logger LOGGER = LogUtils.getLogger();
 
     public MobFriends(IEventBus modEventBus) {
-        LOGGER.info("MobFriends Mod is loading!");
+        ModItems.ITEMS.register(modEventBus);
+        ModEntities.ENTITY_TYPES.register(modEventBus);
+        ModCreativeTabs.CREATIVE_MODE_TABS.register(modEventBus);
+        ModAttachments.ATTACHMENT_TYPES.register(modEventBus);
+        ModTriggers.TRIGGERS.register(modEventBus); // <-- 修复1: 添加这行来注册触发器
 
-        // --- 原有注册逻辑 (MOD事件总线) ---
-        ModItems.register(modEventBus);
-        ModCreativeTabs.register(modEventBus);
-        ModEntities.register(modEventBus);
+        // 修复2: 暂时注释掉Config注册，我们稍后处理
+        // modEventBus.addListener(MobFriendsConfig::register);
 
-        // --- 核心修正点：手动注册 FORGE 事件监听器 ---
-        // 这行代码会获取全局的 FORGE 事件总线，
-        // 并将我们的 ForgeBus 类注册进去，确保它能收到游戏运行时的所有事件。
-        NeoForge.EVENT_BUS.register(ForgeBus.class);
-        // --- 修正点结束 ---
+        // 修复3: 正确的触发器注册监听方式
+        modEventBus.addListener(ModTriggers::register);
+
+        if (FMLLoader.getDist().isClient()) {
+            // 修复4: 暂时注释掉ClientSetup，之后再修复它
+            // modEventBus.addListener(ClientSetup::init);
+        }
     }
 }

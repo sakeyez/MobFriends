@@ -2,7 +2,6 @@ package com.sake.mobfriends.event;
 
 import com.sake.mobfriends.config.FeedingConfig;
 import com.sake.mobfriends.entity.ai.EatBlockFoodGoal;
-import com.sake.mobfriends.init.ModEntities;
 import com.sake.mobfriends.init.ModItems;
 import com.sake.mobfriends.util.ModTags;
 import net.minecraft.world.entity.EntityType;
@@ -28,16 +27,17 @@ public class ForgeBus {
         LivingEntity entity = event.getEntity();
         Level level = entity.level();
 
-        if (level.isClientSide) return;
+        if (level.isClientSide()) return;
 
         Supplier<Item> tokenSupplier = null;
         EntityType<?> type = entity.getType();
 
-        if (type.is(ModTags.Entities.ZOMBIES) || type == ModEntities.ZOMBIE_NPC.get()) {
+        // 掉落物逻辑现在完全由标签驱动
+        if (type.is(ModTags.Entities.ZOMBIES)) {
             tokenSupplier = ModItems.ZOMBIE_TOKEN;
         } else if (type.is(ModTags.Entities.SKELETONS)) {
             tokenSupplier = ModItems.SKELETON_TOKEN;
-        } // ... 其他家族判断
+        } // ... 其他家族判断 ...
 
         if (tokenSupplier != null && FeedingConfig.getFoodBlocks(type).contains(event.getEatenBlockState().getBlock())) {
             ItemEntity itemEntity = new ItemEntity(level, entity.getX(), entity.getY() + 0.5, entity.getZ(), new ItemStack(tokenSupplier.get()));
@@ -52,14 +52,19 @@ public class ForgeBus {
         }
         EntityType<?> type = mob.getType();
 
-        // 检查这个生物是否有对应的食谱
+        // --- 核心修正：统一AI添加逻辑 ---
+        // 我们不再需要任何对具体NPC的if判断。
+        // 只需要查询这个生物有没有对应的食谱即可。
         Set<Block> foodBlocks = FeedingConfig.getFoodBlocks(type);
+
+        // 如果找到了任何食物（无论是通过实体ID还是通过标签继承）
         if (!foodBlocks.isEmpty()) {
+            // 就为它添加完全由配置驱动的AI
             mob.goalSelector.addGoal(1, new EatBlockFoodGoal(
                     mob,
                     1.0D,
                     16,
-                    foodBlocks::contains
+                    foodBlocks::contains // AI的食物判断逻辑直接使用配置结果
             ));
         }
     }
