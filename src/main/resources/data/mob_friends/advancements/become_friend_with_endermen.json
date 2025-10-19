@@ -1,17 +1,17 @@
 {
   "display": {
     "icon": { "item": "mob_friends:enderman_token" },
-    "title": { "translate": "advancements.factions.friendship.endermen.title" },
-    "description": { "translate": "advancements.factions.friendship.endermen.description" },
+    "title": { "translate": "advancements.mob_friends.friendship.endermen.title" },
+    "description": { "translate": "advancements.mob_friends.friendship.endermen.description" },
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,
     "hidden": false
   },
-  "parent": "factions:root",
+  "parent": "mob_friends:root",
   "criteria": {
     "requirement": {
-      "trigger": "factions:become_friendly_with_faction",
+      "trigger": "mob_friends:become_friendly_with_faction",
       "conditions": {
         "faction": "endermen"
       }

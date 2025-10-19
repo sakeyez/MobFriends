@@ -1,17 +1,17 @@
 {
   "display": {
     "icon": { "item": "mob_friends:blaze_token" },
-    "title": { "translate": "advancements.factions.friendship.blazes.title" },
-    "description": { "translate": "advancements.factions.friendship.blazes.description" },
+    "title": { "translate": "advancements.mob_friends.friendship.blazes.title" },
+    "description": { "translate": "advancements.mob_friends.friendship.blazes.description" },
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,
     "hidden": false
   },
-  "parent": "factions:root",
+  "parent": "mob_friends:root",
   "criteria": {
     "requirement": {
-      "trigger": "factions:become_friendly_with_faction",
+      "trigger": "mob_friends:become_friendly_with_faction",
       "conditions": {
         "faction": "blazes"
       }

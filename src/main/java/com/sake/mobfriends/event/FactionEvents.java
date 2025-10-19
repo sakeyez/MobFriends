@@ -34,14 +34,11 @@ public class FactionEvents {
     }
 
     @SubscribeEvent
-    public static void onPlayerPickupItem(ItemEntityPickupEvent event) {
-        // 【核心移植 - 最终修正】
-        // 根据您提供的 PlayerEvent.java 源代码，使用 getPlayer() 是获取玩家的最可靠方法。
+    public static void onPlayerPickupItem(ItemEntityPickupEvent.Pre event) {
         if (!(event.getPlayer() instanceof ServerPlayer serverPlayer)) {
             return;
         }
 
-        // 从事件中获取物品实体，再从中获取物品堆栈
         String faction = FactionHandler.getFactionByToken(event.getItemEntity().getItem().getItem());
         if (faction == null) {
             return;
@@ -50,7 +47,8 @@ public class FactionEvents {
         Set<String> friendlyFactions = ModAttachments.getFriendlyFactions(serverPlayer);
 
         if (friendlyFactions.add(faction)) {
-            ModTriggers.BECAME_FRIENDLY_WITH_FACTION.get().trigger(serverPlayer, faction);
+            // 【移植修正】直接调用触发器的 trigger 方法，不再需要 .get()
+            ModTriggers.BECAME_FRIENDLY_WITH_FACTION.trigger(serverPlayer, faction);
         }
     }
 }
