@@ -15,8 +15,8 @@
     "announce_to_chat": false
   },
   "criteria": {
-    "login": {
-      "trigger": "minecraft:inventory_changed"
+    "tick": {
+      "trigger": "minecraft:tick"
     }
   }
 }

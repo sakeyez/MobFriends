@@ -47,8 +47,8 @@ public class FactionEvents {
         Set<String> friendlyFactions = ModAttachments.getFriendlyFactions(serverPlayer);
 
         if (friendlyFactions.add(faction)) {
-            // 【移植修正】直接调用触发器的 trigger 方法，不再需要 .get()
-            ModTriggers.BECAME_FRIENDLY_WITH_FACTION.trigger(serverPlayer, faction);
+
+            ModTriggers.BECAME_FRIENDLY_WITH_FACTION.get().trigger(serverPlayer, faction);
         }
     }
 }
