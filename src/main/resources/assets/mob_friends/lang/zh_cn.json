@@ -30,5 +30,19 @@
   "entity.mob_friends.slime_npc_entity": "史莱姆朋友",
   "entity.mob_friends.blaze_npc_entity": "烈焰人朋友",
   "entity.mob_friends.combat_zombie": "僵尸战士",
-  "entity.mob_friends.combat_wither": "凋灵战士"
+  "entity.mob_friends.combat_wither": "凋灵战士",
+  "advancements.mob_friends.root.title": "止戈为友",
+  "advancements.mob_friends.root.description": "与怪物成为朋友",
+  "advancements.mob_friends.friendship.zombies.title": "不再是敌人",
+  "advancements.mob_friends.friendship.zombies.description": "你获得了僵尸的认可，它们将不再主动攻击你。",
+  "advancements.mob_friends.friendship.skeletons.title": "化敌为友",
+  "advancements.mob_friends.friendship.skeletons.description": "你获得了骷髅的认可，它们将不再主动攻击你。",
+  "advancements.mob_friends.friendship.creepers.title": "和平主义",
+  "advancements.mob_friends.friendship.creepers.description": "你获得了苦力怕的认可，它们将不再主动攻击你。",
+  "advancements.mob_friends.friendship.blazes.title": "地狱契约",
+  "advancements.mob_friends.friendship.blazes.description": "你获得了烈焰人的认可，它们将不再主动攻击你。",
+  "advancements.mob_friends.friendship.slimes.title": "黏性伙伴",
+  "advancements.mob_friends.friendship.slimes.description": "你获得了史莱姆的认可，它们将不再主动攻击你。",
+  "advancements.mob_friends.friendship.endermen.title": "直视深渊",
+  "advancements.mob_friends.friendship.endermen.description": "你获得了末影人的认可，它们将不再主动攻击你。"
 }

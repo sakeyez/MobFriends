@@ -23,7 +23,7 @@ import java.util.function.Predicate;
 
 public class EatBlockFoodGoal extends Goal {
 
-    // ... (变量和构造函数保持不变) ...
+
     protected final PathfinderMob mob;
     private final double speedModifier;
     private final int searchRange;
@@ -32,6 +32,7 @@ public class EatBlockFoodGoal extends Goal {
     protected BlockPos targetPos;
     private int eatingCooldown;
     private int findNewTargetCooldown;
+    private int searchCooldown = 0;
 
     public EatBlockFoodGoal(PathfinderMob mob, double speedModifier, int searchRange, Predicate<Block> foodBlockPredicate) {
         this.mob = mob;
@@ -40,10 +41,16 @@ public class EatBlockFoodGoal extends Goal {
         this.foodBlockPredicate = foodBlockPredicate;
         this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK, Flag.JUMP));
     }
+    
 
-    // ... (canUse, canContinueToUse, start, stop 保持不变) ...
     @Override
     public boolean canUse() {
+        if (this.searchCooldown > 0) {
+            --this.searchCooldown;
+            return false;
+        }
+
+        this.searchCooldown = 20 + this.mob.getRandom().nextInt(20); // 每1-2秒搜索一次
         Optional<BlockPos> nearestFood = findNearestFoodBlock();
         if (nearestFood.isPresent()) {
             this.targetPos = nearestFood.get();

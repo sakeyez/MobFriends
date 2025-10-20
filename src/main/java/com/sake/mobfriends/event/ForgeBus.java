@@ -63,7 +63,7 @@ public class ForgeBus {
             mob.goalSelector.addGoal(1, new EatBlockFoodGoal(
                     mob,
                     1.0D,
-                    16,
+                    6,
                     foodBlocks::contains // AI的食物判断逻辑直接使用配置结果
             ));
         }
