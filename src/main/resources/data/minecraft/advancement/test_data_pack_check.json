@@ -1,0 +1,19 @@
+{
+  "display": {
+    "icon": {
+      "item": "minecraft:torch"
+    },
+    "title": "DATA PACK TEST",
+    "description": "If you see this, the mod's data pack IS loading!",
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "parent": "minecraft:husbandry/root", 
+  "criteria": {
+    "requirement": {
+      "trigger": "minecraft:placed_block"
+    }
+  }
+}

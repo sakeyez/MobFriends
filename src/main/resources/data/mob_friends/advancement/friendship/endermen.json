@@ -1,0 +1,32 @@
+{
+  "parent": "mob_friends:root",
+  "display": {
+    "icon": {
+      "id": "mob_friends:enderman_token"
+    },
+    "title": {
+      "translate": "advancements.mob_friends.friendship.endermen.title"
+    },
+    "description": {
+      "translate": "advancements.mob_friends.friendship.endermen.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "requirement": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": [
+              "mob_friends:enderman_token"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}
