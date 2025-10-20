@@ -1,1 +1,44 @@
-{ "language": "en_us" } 
+{
+  "creativetab.mob_friends_tab": "Mob Friends",
+  "itemGroup.mob_friends_tab": "Mob Friends",
+  "modid.mob_friends": "Mob Friends",
+
+  "item.mob_friends.zombie_core": "Zombie Core",
+  "item.mob_friends.broken_zombie_core": "Broken Zombie Core",
+  "item.mob_friends.wither_core": "Wither Core",
+  "item.mob_friends.broken_wither_core": "Broken Wither Core",
+
+  "item.mob_friends.zombie_token": "Zombie's Thanks",
+  "item.mob_friends.skeleton_token": "Skeleton's Thanks",
+  "item.mob_friends.creeper_token": "Creeper's Thanks",
+  "item.mob_friends.enderman_token": "Enderman's Thanks",
+  "item.mob_friends.slime_token": "Slime's Thanks",
+  "item.mob_friends.blaze_token": "Blaze's Thanks",
+
+  "item.mob_friends.coin": "Eye Jade",
+  "item.mob_friends.powder": "Ender Powder",
+
+  "entity.mob_friends.zombie_npc_entity": "Zombie Farmer",
+  "entity.mob_friends.skeleton_npc_entity": "Skeleton Fisherman",
+  "entity.mob_friends.creeper_npc_entity": "Creeper Friend",
+  "entity.mob_friends.enderman_npc_entity": "Enderman Friend",
+  "entity.mob_friends.slime_npc_entity": "Slime Friend",
+  "entity.mob_friends.blaze_npc_entity": "Blaze Friend",
+  "entity.mob_friends.combat_zombie": "Zombie Warrior",
+  "entity.mob_friends.combat_wither": "Wither Warrior",
+
+  "advancements.mob_friends.root.title": "Mob Friends",
+  "advancements.mob_friends.root.description": "Making friends with monsters",
+  "advancements.mob_friends.friendship.zombies.title": "Not Enemies Anymore",
+  "advancements.mob_friends.friendship.zombies.description": "You have gained the recognition of the zombies, they will no longer actively attack you.",
+  "advancements.mob_friends.friendship.skeletons.title": "From Foe to Friend",
+  "advancements.mob_friends.friendship.skeletons.description": "You have gained the recognition of the skeletons, they will no longer actively attack you.",
+  "advancements.mob_friends.friendship.creepers.title": "Pacifism",
+  "advancements.mob_friends.friendship.creepers.description": "You have gained the recognition of the creepers, they will no longer actively attack you.",
+  "advancements.mob_friends.friendship.blazes.title": "Nether Pact",
+  "advancements.mob_friends.friendship.blazes.description": "You have gained the recognition of the blazes, they will no longer actively attack you.",
+  "advancements.mob_friends.friendship.slimes.title": "Sticky Partners",
+  "advancements.mob_friends.friendship.slimes.description": "You have gained the recognition of the slimes, they will no longer actively attack you.",
+  "advancements.mob_friends.friendship.endermen.title": "Stare into the Abyss",
+  "advancements.mob_friends.friendship.endermen.description": "You have gained the recognition of the endermen, they will no longer actively attack you."
+}
