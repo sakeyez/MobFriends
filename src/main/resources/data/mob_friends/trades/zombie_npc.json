@@ -1,5 +1,4 @@
 {
-  "entity": "friendly_mob_npc:zombie_npc",
   "trades": [
     {
       "buyA": "minecraft:rotten_flesh",
@@ -20,6 +19,12 @@
       "maxUses": 5,
       "xp": 5,
       "priceMultiplier": 0.2
+    },
+    {
+      "buyA": "minecraft:potato",
+      "buyACount": 20,
+      "sell": "minecraft:emerald",
+      "sellCount": 1
     }
   ]
 }

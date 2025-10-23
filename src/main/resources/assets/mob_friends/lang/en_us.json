@@ -40,5 +40,10 @@
   "advancements.mob_friends.friendship.slimes.title": "Sticky Partners",
   "advancements.mob_friends.friendship.slimes.description": "You have gained the recognition of the slimes, they will no longer actively attack you.",
   "advancements.mob_friends.friendship.endermen.title": "Stare into the Abyss",
-  "advancements.mob_friends.friendship.endermen.description": "You have gained the recognition of the endermen, they will no longer actively attack you."
+  "advancements.mob_friends.friendship.endermen.description": "You have gained the recognition of the endermen, they will no longer actively attack you.",
+  "item.mob_friends.active_zombie_core": "Active Zombie Core",
+  "tooltip.mob_friends.active_zombie_core": "Bound to a warrior.",
+  "tooltip.mob_friends.broken_zombie_core": "The warrior has fallen.",
+  "tooltip.mob_friends.broken_zombie_core_repair": "Use with a Totem of Undying in off-hand to revive."
+}
 }

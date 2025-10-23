@@ -7,6 +7,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
+import net.minecraft.world.entity.TamableAnimal;
 
 import java.util.function.Supplier;
 
@@ -23,8 +24,8 @@ public class ModEntities {
 
     // --- 战斗型生物 ---
     public static final Supplier<EntityType<CombatZombie>> COMBAT_ZOMBIE = ENTITY_TYPES.register("combat_zombie",
-            () -> EntityType.Builder.of(CombatZombie::new, MobCategory.MONSTER)
-                    .sized(0.6F, 1.95F) // 尺寸参考原版僵尸
+            () -> EntityType.Builder.<CombatZombie>of(CombatZombie::new, MobCategory.CREATURE) // of(CombatZombie::new...
+                    .sized(0.6F, 1.95F)
                     .build("combat_zombie"));
 
     public static final Supplier<EntityType<CombatWither>> COMBAT_WITHER = ENTITY_TYPES.register("combat_wither",

@@ -5,6 +5,7 @@
 
 
   "item.mob_friends.zombie_core": "僵尸核心",
+  "item.mob_friends.active_zombie_core": "§8存储核心",
   "item.mob_friends.broken_zombie_core": "破碎的僵尸核心",
   "item.mob_friends.wither_core": "凋灵核心",
   "item.mob_friends.broken_wither_core": "破碎的凋灵核心",
@@ -43,5 +44,9 @@
   "advancements.mob_friends.friendship.slimes.title": "黏性伙伴",
   "advancements.mob_friends.friendship.slimes.description": "你获得了史莱姆的认可，它们将不再主动攻击你。",
   "advancements.mob_friends.friendship.endermen.title": "直视深渊",
-  "advancements.mob_friends.friendship.endermen.description": "你获得了末影人的认可，它们将不再主动攻击你。"
+  "advancements.mob_friends.friendship.endermen.description": "你获得了末影人的认可，它们将不再主动攻击你。",
+  "tooltip.mob_friends.active_zombie_core.linked": "§a已与一位战士链接。",
+  "tooltip.mob_friends.active_zombie_core.stored": "§9已储存一位战士。右键地面释放。",
+  "tooltip.mob_friends.broken_zombie_core": "§c其中的战士已倒下。",
+  "tooltip.mob_friends.broken_zombie_core_repair": "§7副手手持不死图腾使用以复活。"
 }
