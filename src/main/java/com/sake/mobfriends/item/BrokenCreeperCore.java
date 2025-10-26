@@ -20,8 +20,10 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 import java.util.UUID;
 
-public class BrokenWitherCore extends Item {
-    public BrokenWitherCore(Properties properties) { super(properties); }
+public class BrokenCreeperCore extends Item {
+    public BrokenCreeperCore(Properties properties) {
+        super(properties);
+    }
 
     @Override
     public @NotNull InteractionResultHolder<ItemStack> use(Level pLevel, Player pPlayer, @NotNull InteractionHand pUsedHand) {
@@ -29,18 +31,18 @@ public class BrokenWitherCore extends Item {
         ItemStack offhandItem = pPlayer.getItemInHand(InteractionHand.OFF_HAND);
 
         if (offhandItem.is(Items.TOTEM_OF_UNDYING)) {
-            ItemStack activeCore = new ItemStack(ModItems.ACTIVE_WITHER_CORE.get());
-            CompoundTag witherData = heldItem.get(ModDataComponents.STORED_WITHER_NBT.get());
+            ItemStack activeCore = new ItemStack(ModItems.ACTIVE_CREEPER_CORE.get());
+            CompoundTag creeperData = heldItem.get(ModDataComponents.STORED_CREEPER_NBT.get());
 
-            if (witherData != null) {
+            if (creeperData != null) {
                 // 【核心修复】在转移数据前，手动将生命值重置为一个正数！
-                witherData.putFloat("Health", 20.0F); // 或者任何你希望的初始生命值
-                activeCore.set(ModDataComponents.STORED_WITHER_NBT.get(), witherData.copy());
+                creeperData.putFloat("Health", 20.0F);
+                activeCore.set(ModDataComponents.STORED_CREEPER_NBT.get(), creeperData.copy());
             }
 
-            UUID witherUUID = heldItem.get(ModDataComponents.WITHER_UUID.get());
-            if (witherUUID != null) {
-                activeCore.set(ModDataComponents.WITHER_UUID.get(), witherUUID);
+            UUID creeperUUID = heldItem.get(ModDataComponents.CREEPER_UUID.get());
+            if (creeperUUID != null) {
+                activeCore.set(ModDataComponents.CREEPER_UUID.get(), creeperUUID);
             }
 
             if (pLevel.isClientSide()) {

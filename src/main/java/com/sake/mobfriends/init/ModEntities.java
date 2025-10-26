@@ -30,8 +30,18 @@ public class ModEntities {
 
     public static final Supplier<EntityType<CombatWither>> COMBAT_WITHER = ENTITY_TYPES.register("combat_wither",
             () -> EntityType.Builder.of(CombatWither::new, MobCategory.MONSTER)
-                    .sized(0.7F, 2.4F) // 尺寸参考原版凋灵骷髅
+                    .sized(0.7F, 2.4F)
                     .build("combat_wither"));
+
+    public static final Supplier<EntityType<CombatCreeper>> COMBAT_CREEPER = ENTITY_TYPES.register("combat_creeper",
+            () -> EntityType.Builder.of(CombatCreeper::new, MobCategory.CREATURE)
+                    .sized(0.6F, 1.7F)
+                    .build("combat_creeper"));
+
+    public static final Supplier<EntityType<CombatBlaze>> COMBAT_BLAZE = ENTITY_TYPES.register("combat_blaze",
+            () -> EntityType.Builder.of(CombatBlaze::new, MobCategory.CREATURE)
+                    .sized(0.6F, 1.8F)
+                    .build("combat_blaze"));
 
     // --- NPC 生物 ---
     public static final Supplier<EntityType<ZombieNpcEntity>> ZOMBIE_NPC = ENTITY_TYPES.register("zombie_npc",

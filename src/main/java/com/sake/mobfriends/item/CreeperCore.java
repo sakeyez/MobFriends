@@ -1,6 +1,6 @@
 package com.sake.mobfriends.item;
 
-import com.sake.mobfriends.entity.CombatWither;
+import com.sake.mobfriends.entity.CombatCreeper;
 import com.sake.mobfriends.init.ModDataComponents;
 import com.sake.mobfriends.init.ModEntities;
 import com.sake.mobfriends.init.ModItems;
@@ -16,29 +16,34 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 
-public class WitherCore extends Item {
-    public WitherCore(Properties properties) { super(properties); }
+public class CreeperCore extends Item {
+    public CreeperCore(Properties properties) {
+        super(properties);
+    }
 
     @Override
     public InteractionResult useOn(UseOnContext context) {
         Level level = context.getLevel();
         if (level.isClientSide()) return InteractionResult.sidedSuccess(true);
         if (context.getClickedFace() != Direction.UP) return InteractionResult.PASS;
+
         Player player = context.getPlayer();
         if (player == null) return InteractionResult.PASS;
 
-        CombatWither wither = ModEntities.COMBAT_WITHER.get().create(level);
-        if (wither == null) return InteractionResult.FAIL;
+        CombatCreeper creeper = ModEntities.COMBAT_CREEPER.get().create(level);
+        if (creeper == null) return InteractionResult.FAIL;
 
-        wither.tame(player);
-        wither.moveTo(context.getClickedPos().above(), context.getRotation(), 0);
+        creeper.tame(player);
+        creeper.moveTo(context.getClickedPos().above(), context.getRotation(), 0);
         if (level instanceof ServerLevel serverLevel) {
-            wither.finalizeSpawn(serverLevel, level.getCurrentDifficultyAt(context.getClickedPos()), MobSpawnType.SPAWN_EGG, null);
-            level.addFreshEntity(wither);
-            ItemStack activeCore = new ItemStack(ModItems.ACTIVE_WITHER_CORE.get());
-            activeCore.set(ModDataComponents.WITHER_UUID.get(), wither.getUUID());
+            creeper.finalizeSpawn(serverLevel, level.getCurrentDifficultyAt(context.getClickedPos()), MobSpawnType.SPAWN_EGG, null);
+            level.addFreshEntity(creeper);
+
+            ItemStack activeCore = new ItemStack(ModItems.ACTIVE_CREEPER_CORE.get());
+            activeCore.set(ModDataComponents.CREEPER_UUID.get(), creeper.getUUID());
             player.setItemInHand(context.getHand(), activeCore);
-            level.playSound(null, context.getClickedPos(), SoundEvents.WITHER_SPAWN, SoundSource.BLOCKS, 1.0F, 1.0F);
+
+            level.playSound(null, context.getClickedPos(), SoundEvents.ZOMBIE_VILLAGER_CONVERTED, SoundSource.BLOCKS, 1.0F, 1.0F);
             return InteractionResult.SUCCESS;
         }
         return InteractionResult.PASS;

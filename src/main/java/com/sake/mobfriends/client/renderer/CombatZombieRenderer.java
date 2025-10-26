@@ -1,30 +1,47 @@
 package com.sake.mobfriends.client.renderer;
 
-import com.sake.mobfriends.MobFriends;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.sake.mobfriends.client.ClientSetup;
 import com.sake.mobfriends.client.model.CombatZombieModel;
 import com.sake.mobfriends.entity.CombatZombie;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
+import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
+import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
 import net.minecraft.resources.ResourceLocation;
 import org.jetbrains.annotations.NotNull;
 
-// NeoForge 1.21.1 移植要点:
-// 1. 构造函数: 渲染器的构造函数现在接收一个 EntityRendererProvider.Context 参数。
-//    你需要在这个构造函数中创建一个模型实例，并传入 context.bakeLayer() 的结果。
-// 2. getTextureLocation(): 这个方法返回实体的材质路径。
-public class CombatZombieRenderer extends HumanoidMobRenderer<CombatZombie, CombatZombieModel> {
+public class CombatZombieRenderer extends HumanoidMobRenderer<CombatZombie, CombatZombieModel<CombatZombie>> {
 
-    // 定义材质路径
-    private static final ResourceLocation TEXTURE_LOCATION = ResourceLocation.fromNamespaceAndPath(
-            MobFriends.MOD_ID, "textures/entity/combat_zombie.png");
+    private static final ResourceLocation ZOMBIE_LOCATION = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/entity/zombie/zombie.png");
 
     public CombatZombieRenderer(EntityRendererProvider.Context context) {
-        // 调用父类构造函数，传入模型实例和阴影大小
-        super(context, new CombatZombieModel(context.bakeLayer(CombatZombieModel.LAYER_LOCATION)), 0.5F);
+        super(context, new CombatZombieModel<>(context.bakeLayer(CombatZombieModel.LAYER_LOCATION)), 0.5F);
+
+        this.addLayer(new HumanoidArmorLayer<>(this,
+                new HumanoidModel<>(context.bakeLayer(ClientSetup.COMBAT_ZOMBIE_INNER_ARMOR_LAYER)),
+                new HumanoidModel<>(context.bakeLayer(ClientSetup.COMBAT_ZOMBIE_OUTER_ARMOR_LAYER)),
+                Minecraft.getInstance().getModelManager()
+        ));
+
+        this.addLayer(new ItemInHandLayer<>(this, context.getItemInHandRenderer()));
     }
 
     @Override
     public @NotNull ResourceLocation getTextureLocation(@NotNull CombatZombie entity) {
-        return TEXTURE_LOCATION;
+        return ZOMBIE_LOCATION;
+    }
+
+    // --- 【最终正确修复】 ---
+    // 移除旧的、错误的 setupRotations 方法
+    // 使用新的、专门用于缩放的 scale 方法
+    @Override
+    protected void scale(CombatZombie zombie, PoseStack poseStack, float partialTickTime) {
+        float scale = zombie.getScale();
+        if (scale != 1.0F) {
+            poseStack.scale(scale, scale, scale);
+        }
     }
 }

@@ -30,46 +30,44 @@ public class BrokenZombieCore extends AbstractCoreItem {
 
     @Override
     public @NotNull InteractionResultHolder<ItemStack> use(Level pLevel, Player pPlayer, @NotNull InteractionHand pUsedHand) {
-        ItemStack heldItem = pPlayer.getItemInHand(pUsedHand);
+        ItemStack heldItem = pPlayer.getItemInHand(pUsedHand); // 这是破损核心
         ItemStack offhandItem = pPlayer.getItemInHand(InteractionHand.OFF_HAND);
 
         if (offhandItem.is(Items.TOTEM_OF_UNDYING)) {
             ItemStack activeCore = new ItemStack(ModItems.ACTIVE_ZOMBIE_CORE.get());
+
+            // --- 【核心修复 B：转移继承的数据】 ---
+
+            // 1. 从破损核心中获取储存的僵尸完整数据
+            CompoundTag zombieData = heldItem.get(ModDataComponents.STORED_ZOMBIE_NBT.get());
+
+            // 2. 如果数据存在，就把它原封不动地转移到新的激活核心里
+            if (zombieData != null) {
+                activeCore.set(ModDataComponents.STORED_ZOMBIE_NBT.get(), zombieData.copy());
+            }
+
+            // 3. 别忘了把UUID也转移过去
             UUID zombieUUID = getZombieUUID(heldItem);
-
-            // --- 【核心修正：修复核心但不召唤】 ---
-
-            // 1. 准备好修复后的核心，并把UUID传过去
             if (zombieUUID != null) {
                 setZombieUUID(activeCore, zombieUUID);
             }
 
-            // 2. 创建一个“空的”僵尸NBT数据，并存入修复好的核心中
-            //    这会让核心立刻进入“已储存”状态，可以被右键召唤
-            CompoundTag freshNbt = new CompoundTag();
-            // 写入最重要的信息：实体ID，这样游戏才知道要生成什么
-            freshNbt.putString("id", EntityType.getKey(com.sake.mobfriends.init.ModEntities.COMBAT_ZOMBIE.get()).toString());
-            activeCore.set(ModDataComponents.STORED_ZOMBIE_NBT.get(), freshNbt);
-
-
-            // 3. 在客户端播放动画
+            // --- 后续逻辑保持不变 ---
             if (pLevel.isClientSide()) {
                 Minecraft.getInstance().gameRenderer.displayItemActivation(activeCore);
             }
 
-            // 4. 在服务端消耗不死图腾
             if (!pLevel.isClientSide()) {
                 if (!pPlayer.getAbilities().instabuild) {
                     offhandItem.shrink(1);
                 }
-                // 只播放音效，不生成实体
                 pLevel.playSound(null, pPlayer.blockPosition(), SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 1.0f, 1.0f);
             }
 
-            // 5. 将玩家手中的破损核心替换为“已修复并储存好”的激活核心
-            pPlayer.setItemInHand(pUsedHand, activeCore);
+            // 替换物品
             return InteractionResultHolder.sidedSuccess(activeCore, pLevel.isClientSide());
         }
+
         return InteractionResultHolder.fail(heldItem);
     }
 

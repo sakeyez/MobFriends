@@ -1,6 +1,6 @@
 package com.sake.mobfriends.item;
 
-import com.sake.mobfriends.entity.CombatWither;
+import com.sake.mobfriends.entity.CombatBlaze;
 import com.sake.mobfriends.init.ModDataComponents;
 import com.sake.mobfriends.init.ModEntities;
 import com.sake.mobfriends.init.ModItems;
@@ -16,29 +16,34 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 
-public class WitherCore extends Item {
-    public WitherCore(Properties properties) { super(properties); }
+public class BlazeCore extends Item {
+    public BlazeCore(Properties properties) {
+        super(properties);
+    }
 
     @Override
     public InteractionResult useOn(UseOnContext context) {
         Level level = context.getLevel();
         if (level.isClientSide()) return InteractionResult.sidedSuccess(true);
         if (context.getClickedFace() != Direction.UP) return InteractionResult.PASS;
+
         Player player = context.getPlayer();
         if (player == null) return InteractionResult.PASS;
 
-        CombatWither wither = ModEntities.COMBAT_WITHER.get().create(level);
-        if (wither == null) return InteractionResult.FAIL;
+        CombatBlaze blaze = ModEntities.COMBAT_BLAZE.get().create(level);
+        if (blaze == null) return InteractionResult.FAIL;
 
-        wither.tame(player);
-        wither.moveTo(context.getClickedPos().above(), context.getRotation(), 0);
+        blaze.tame(player);
+        blaze.moveTo(context.getClickedPos().above(), context.getRotation(), 0);
         if (level instanceof ServerLevel serverLevel) {
-            wither.finalizeSpawn(serverLevel, level.getCurrentDifficultyAt(context.getClickedPos()), MobSpawnType.SPAWN_EGG, null);
-            level.addFreshEntity(wither);
-            ItemStack activeCore = new ItemStack(ModItems.ACTIVE_WITHER_CORE.get());
-            activeCore.set(ModDataComponents.WITHER_UUID.get(), wither.getUUID());
+            blaze.finalizeSpawn(serverLevel, level.getCurrentDifficultyAt(context.getClickedPos()), MobSpawnType.SPAWN_EGG, null);
+            level.addFreshEntity(blaze);
+
+            ItemStack activeCore = new ItemStack(ModItems.ACTIVE_BLAZE_CORE.get());
+            activeCore.set(ModDataComponents.BLAZE_UUID.get(), blaze.getUUID());
             player.setItemInHand(context.getHand(), activeCore);
-            level.playSound(null, context.getClickedPos(), SoundEvents.WITHER_SPAWN, SoundSource.BLOCKS, 1.0F, 1.0F);
+
+            level.playSound(null, context.getClickedPos(), SoundEvents.BLAZE_SHOOT, SoundSource.BLOCKS, 1.0F, 1.0F);
             return InteractionResult.SUCCESS;
         }
         return InteractionResult.PASS;

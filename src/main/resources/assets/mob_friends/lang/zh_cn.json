@@ -3,13 +3,18 @@
   "itemGroup.mob_friends_tab": "止戈为友",
   "modid.mob_friends": "止戈为友",
 
-
   "item.mob_friends.zombie_core": "僵尸核心",
-  "item.mob_friends.active_zombie_core": "§8存储核心",
+  "item.mob_friends.active_zombie_core": "激活的僵尸核心",
   "item.mob_friends.broken_zombie_core": "破碎的僵尸核心",
   "item.mob_friends.wither_core": "凋灵核心",
+  "item.mob_friends.active_wither_core": "激活的凋灵核心",
   "item.mob_friends.broken_wither_core": "破碎的凋灵核心",
-
+  "item.mob_friends.creeper_core": "苦力怕核心",
+  "item.mob_friends.active_creeper_core": "激活的苦力怕核心",
+  "item.mob_friends.broken_creeper_core": "破碎的苦力怕核心",
+  "item.mob_friends.blaze_core": "烈焰人核心",
+  "item.mob_friends.active_blaze_core": "激活的烈焰人核心",
+  "item.mob_friends.broken_blaze_core": "破碎的烈焰人核心",
 
   "item.mob_friends.zombie_token": "僵尸的谢意",
   "item.mob_friends.skeleton_token": "骷髅的谢意",
@@ -18,10 +23,8 @@
   "item.mob_friends.slime_token": "史莱姆的谢意",
   "item.mob_friends.blaze_token": "烈焰人的谢意",
 
-
   "item.mob_friends.coin": "眸玉",
   "item.mob_friends.powder": "末影粉",
-
 
   "entity.mob_friends.zombie_npc_entity": "僵尸农夫",
   "entity.mob_friends.skeleton_npc_entity": "骷髅渔民",
@@ -31,6 +34,7 @@
   "entity.mob_friends.blaze_npc_entity": "烈焰人朋友",
   "entity.mob_friends.combat_zombie": "僵尸战士",
   "entity.mob_friends.combat_wither": "凋灵战士",
+
   "advancements.mob_friends.root.title": "止戈为友",
   "advancements.mob_friends.root.description": "与怪物成为朋友",
   "advancements.mob_friends.friendship.zombies.title": "不再是敌人",
@@ -45,8 +49,25 @@
   "advancements.mob_friends.friendship.slimes.description": "你获得了史莱姆的认可，它们将不再主动攻击你。",
   "advancements.mob_friends.friendship.endermen.title": "直视深渊",
   "advancements.mob_friends.friendship.endermen.description": "你获得了末影人的认可，它们将不再主动攻击你。",
+
   "tooltip.mob_friends.active_zombie_core.linked": "§a已与一位战士链接。",
   "tooltip.mob_friends.active_zombie_core.stored": "§9已储存一位战士。右键地面释放。",
   "tooltip.mob_friends.broken_zombie_core": "§c其中的战士已倒下。",
-  "tooltip.mob_friends.broken_zombie_core_repair": "§7副手手持不死图腾使用以复活。"
+  "tooltip.mob_friends.broken_zombie_core_repair": "§7副手手持不死图腾使用以复活。",
+
+  "message.mob_friends.unfeedable_food": "§e这种食物似乎蕴含着强大的力量...",
+  "message.mob_friends.ritual_pending": "§c它似乎遇到了瓶颈... (提示: 将 %s §c放置在地上)",
+  "message.mob_friends.food_eaten": "§e战士伙伴摇了摇头，看来它已经尝过这个味道了。",
+  "message.mob_friends.ate_new_food": "§a战士伙伴吃下了新食物！ (§b%s§a/%s)",
+  "message.mob_friends.ritual_level_2": "§5吞下珍珠的瞬间，它的身影变得飘忽不定，仿佛掌握了空间的力量！",
+  "message.mob_friends.ritual_level_3": "§6金色的光辉包裹了它！它突破了凡物的极限，成为了真正的传奇战士！",
+
+  "entity.mob_friends.combat_creeper": "苦力怕战士",
+  "entity.mob_friends.combat_blaze": "烈焰人战士",
+
+  "message.mob_friends.level_cap_stuck": "§c%s似乎遇到了瓶颈，需要特殊的食物才能继续成长！",
+  "message.mob_friends.level_cap_broken": "§a%s吞噬了强大的食物，突破了自身的极限！",
+  "message.mob_friends.ate_dining_food": "§e%s吃下了美味的大餐，获得了 %s 点幸福感！",
+  "message.mob_friends.ate_food": "§a%s获得了 %s 点幸福感。（%s/%s）",
+  "message.mob_friends.level_up": "§b%s升级了！现在是 %s 级！"
 }

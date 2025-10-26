@@ -1,7 +1,7 @@
 package com.sake.mobfriends.client.model;
 
 import com.sake.mobfriends.MobFriends;
-import com.sake.mobfriends.entity.CombatZombie;
+import com.sake.mobfriends.entity.CombatCreeper;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.ModelPart;
@@ -10,17 +10,16 @@ import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.resources.ResourceLocation;
 
-// 【移植】像1.20.1版本一样，使用泛型T
-public class CombatZombieModel<T extends CombatZombie> extends HumanoidModel<T> {
-
+public class CombatCreeperModel extends HumanoidModel<CombatCreeper> {
     public static final ModelLayerLocation LAYER_LOCATION = new ModelLayerLocation(
-            ResourceLocation.fromNamespaceAndPath(MobFriends.MOD_ID, "combat_zombie"), "main");
+            ResourceLocation.fromNamespaceAndPath(MobFriends.MOD_ID, "combat_creeper"), "main");
 
-    public CombatZombieModel(ModelPart root) {
+    public CombatCreeperModel(ModelPart root) {
         super(root);
     }
 
     public static LayerDefinition createBodyLayer() {
+        // 我们暂时使用标准人形模型，所以苦力怕会有人形
         MeshDefinition meshdefinition = HumanoidModel.createMesh(CubeDeformation.NONE, 0.0F);
         return LayerDefinition.create(meshdefinition, 64, 64);
     }

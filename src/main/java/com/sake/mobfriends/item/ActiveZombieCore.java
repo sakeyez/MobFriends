@@ -53,6 +53,7 @@ public class ActiveZombieCore extends AbstractCoreItem {
             if (entity != null) {
                 serverLevel.addFreshEntity(entity);
                 stack.remove(ModDataComponents.STORED_ZOMBIE_NBT.get());
+                //音效
                 level.playSound(null, context.getClickedPos(), SoundEvents.PLAYER_SPLASH, SoundSource.PLAYERS, 1.0F, 1.0F);
                 return InteractionResult.SUCCESS;
             }
@@ -63,9 +64,15 @@ public class ActiveZombieCore extends AbstractCoreItem {
 
     public static void storeZombie(ItemStack stack, CombatZombie zombie) {
         if (zombie.isAlive()) {
-            CompoundTag nbt = new CompoundTag();
-            zombie.save(nbt);
-            nbt.remove("UUID");
+            // 使用 saveWithoutId 来获取所有数据，这比 .save() 更可控
+            CompoundTag nbt = zombie.saveWithoutId(new CompoundTag());
+
+            // 【核心修复】
+            // 我们不再依赖 zombie.save() 来添加实体ID，而是手动添加。
+            // 这确保了加载时能正确识别实体类型。
+            nbt.putString("id", EntityType.getKey(zombie.getType()).toString());
+
+            // 将NBT数据存入核心物品
             stack.set(ModDataComponents.STORED_ZOMBIE_NBT.get(), nbt);
         }
     }

@@ -4,6 +4,7 @@ import com.sake.mobfriends.entity.CombatZombie;
 import com.sake.mobfriends.init.ModEntities;
 import com.sake.mobfriends.init.ModItems;
 import net.minecraft.core.Direction;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -52,7 +53,11 @@ public class ZombieCore extends AbstractCoreItem {
             setZombieUUID(activeCore, zombie.getUUID());
             player.setItemInHand(context.getHand(), activeCore);
 
+            // 音效
             level.playSound(null, context.getClickedPos(), SoundEvents.ZOMBIE_VILLAGER_CONVERTED, SoundSource.BLOCKS, 1.0F, 1.0F);
+            // 粒子
+            serverLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, zombie.getX(), zombie.getY() + 1.5, zombie.getZ(), 20, 0.5, 0.5, 0.5, 0.1);
+
             return InteractionResult.SUCCESS;
         }
         return InteractionResult.PASS;

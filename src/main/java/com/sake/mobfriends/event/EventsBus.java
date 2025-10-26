@@ -22,6 +22,8 @@ public class EventsBus {
         // 为每个自定义生物注册属性
         event.put(ModEntities.COMBAT_ZOMBIE.get(), CombatZombie.createAttributes().build());
         event.put(ModEntities.COMBAT_WITHER.get(), CombatWither.createAttributes().build());
+        event.put(ModEntities.COMBAT_CREEPER.get(), CombatCreeper.createAttributes().build());
+        event.put(ModEntities.COMBAT_BLAZE.get(), CombatBlaze.createAttributes().build());
         event.put(ModEntities.ZOMBIE_NPC.get(), ZombieNpcEntity.createAttributes().build());
         event.put(ModEntities.SKELETON_NPC.get(), SkeletonNpcEntity.createAttributes().build());
         event.put(ModEntities.CREEPER_NPC.get(), CreeperNpcEntity.createAttributes().build());
