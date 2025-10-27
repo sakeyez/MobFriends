@@ -28,6 +28,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -52,10 +53,15 @@ public class CombatZombie extends AbstractWarriorEntity {
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
 
-        Set<Block> foodBlocks = FeedingConfig.getFoodBlocks(this.getType());
-        if (!foodBlocks.isEmpty()) {
-            this.eatBlockFoodGoal = new EatBlockFoodGoal(this, 1.2D, 16, foodBlocks::contains);
+        // 【修改】让战士总是有吃仪式方块的AI
+        Set<Block> ritualFoodBlocks = new HashSet<>();
+        ritualFoodBlocks.addAll(getTier1RitualBlocks());
+        ritualFoodBlocks.addAll(getTier2RitualBlocks());
+        if (!ritualFoodBlocks.isEmpty()) {
+            this.eatBlockFoodGoal = new EatBlockFoodGoal(this, 1.2D, 16, ritualFoodBlocks::contains);
+            this.goalSelector.addGoal(1, this.eatBlockFoodGoal); // 直接添加，不再需要updateEatGoal
         }
+
 
         this.goalSelector.addGoal(2, new SitWhenOrderedToGoal(this));
         this.goalSelector.addGoal(3, new LeapAtTargetGoal(this, 0.4F));
@@ -68,8 +74,6 @@ public class CombatZombie extends AbstractWarriorEntity {
         this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
         this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
         this.targetSelector.addGoal(3, new HurtByTargetGoal(this).setAlertOthers());
-
-        updateEatGoal();
     }
 
     public static AttributeSupplier.@NotNull Builder createAttributes() {

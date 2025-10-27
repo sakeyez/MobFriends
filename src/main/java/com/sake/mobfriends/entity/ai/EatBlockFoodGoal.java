@@ -5,6 +5,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.PathfinderMob;
@@ -116,7 +117,7 @@ public class EatBlockFoodGoal extends Goal {
             // --- 冷却结束，执行“咬一口”的动作 ---
             Level level = this.mob.level();
             BlockState state = level.getBlockState(this.targetPos);
-
+            this.mob.playSound(SoundEvents.GENERIC_EAT, 1.0F, 1.0F);
             // --- 核心修正点：将Glow粒子生成移到这里 ---
             // 只有在“咬”的那一刻才触发
             if (level instanceof ServerLevel serverLevel) {
@@ -154,7 +155,7 @@ public class EatBlockFoodGoal extends Goal {
             }
 
             // 重置冷却计时器
-            this.eatingCooldown = 20;
+            this.eatingCooldown = 7;
         }
     }
 

@@ -1,6 +1,9 @@
 package com.sake.mobfriends.entity;
 
+import com.sake.mobfriends.entity.ai.EatBlockFoodGoal;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
@@ -20,18 +23,31 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.SmallFireball;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-public class CombatBlaze extends TamableAnimal implements RangedAttackMob {
+// 【修改】继承 AbstractWarriorEntity
+public class CombatBlaze extends AbstractWarriorEntity implements RangedAttackMob {
+
+    // 【新增】定义仪式食物
+    private static final Set<Block> TIER_1_BLOCKS = Stream.of(
+            ResourceLocation.fromNamespaceAndPath("kaleidoscope_cookery", "chorus_fried_egg"),
+            ResourceLocation.fromNamespaceAndPath("kaleidoscope_cookery", "blaze_lamb_chop")
+    ).map(BuiltInRegistries.BLOCK::get).filter(block -> block != Blocks.AIR).collect(Collectors.toSet());
 
     public CombatBlaze(EntityType<? extends TamableAnimal> type, Level level) {
         super(type, level);
-        this.setOrderedToSit(false);
         this.moveControl = new MoveControl(this);
     }
 
@@ -41,42 +57,59 @@ public class CombatBlaze extends TamableAnimal implements RangedAttackMob {
                 .add(Attributes.FLYING_SPEED, 0.6D)
                 .add(Attributes.MOVEMENT_SPEED, 0.3D)
                 .add(Attributes.ATTACK_DAMAGE, 6.0D)
+                .add(Attributes.ARMOR, 3.0D) // 添加护甲
                 .add(Attributes.FOLLOW_RANGE, 48.0D);
     }
 
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        this.goalSelector.addGoal(1, new SitWhenOrderedToGoal(this));
+        // 【新增】吃东西的AI
+        Set<Block> ritualFoodBlocks = new HashSet<>(getTier1RitualBlocks());
+        if (!ritualFoodBlocks.isEmpty()) {
+            this.eatBlockFoodGoal = new EatBlockFoodGoal(this, 1.2D, 16, ritualFoodBlocks::contains);
+            this.goalSelector.addGoal(1, this.eatBlockFoodGoal);
+        }
 
-        // 【核心修改】将战斗AI和闲置飞行AI分开
-        this.goalSelector.addGoal(2, new BlazeAttackGoal(this)); // 战斗时使用的AI
-        this.goalSelector.addGoal(3, new BlazeFloatGoal(this));  // 非战斗时使用的AI
-
-        this.goalSelector.addGoal(4, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F));
-        this.goalSelector.addGoal(5, new RandomLookAroundGoal(this));
-        this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 8.0F));
+        this.goalSelector.addGoal(2, new SitWhenOrderedToGoal(this));
+        this.goalSelector.addGoal(3, new BlazeAttackGoal(this));
+        this.goalSelector.addGoal(4, new BlazeFloatGoal(this));
+        this.goalSelector.addGoal(5, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F));
+        this.goalSelector.addGoal(6, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 8.0F));
 
         this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
         this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
         this.targetSelector.addGoal(3, new HurtByTargetGoal(this).setAlertOthers());
     }
 
+    // --- 【新增】成长属性实现 ---
+    @Override
+    protected double getHealthForLevel(int level) { return 50.0 + (level - 1) * 5.0; }
+    @Override
+    protected double getDamageForLevel(int level) { return 6.0 + (level - 1) * 0.8; }
+    @Override
+    protected double getSpeedForLevel(int level) { return 0.3 + (level - 1) * 0.003; }
+    @Override
+    protected double getArmorForLevel(int level) { return 3.0 + (level - 1) * 0.35; }
+    @Override
+    protected Set<Block> getTier1RitualBlocks() { return TIER_1_BLOCKS; }
+    @Override
+    protected Set<Block> getTier2RitualBlocks() { return Collections.emptySet(); }
+
+
     @Override
     public void performRangedAttack(@NotNull LivingEntity pTarget, float pVelocity) {
         this.playSound(SoundEvents.BLAZE_SHOOT, 1.0F, 1.0F);
-        // --- 火球准度控制区 ---
         double d0 = pTarget.getX() - this.getX();
         double d1 = pTarget.getEyeY() - this.getEyeY();
         double d2 = pTarget.getZ() - this.getZ();
-        // --- 结束 ---
         Vec3 movement = new Vec3(d0, d1, d2);
         SmallFireball smallfireball = new SmallFireball(this.level(), this, movement);
         smallfireball.setPos(this.getX(), this.getEyeY(), this.getZ());
         this.level().addFreshEntity(smallfireball);
     }
 
-    // 战斗AI
     static class BlazeAttackGoal extends Goal {
         private final CombatBlaze blaze;
         private int attackCooldown = 0;
@@ -88,13 +121,11 @@ public class CombatBlaze extends TamableAnimal implements RangedAttackMob {
 
         @Override
         public boolean canUse() {
-            // 只有在有目标时才启动
             return this.blaze.getTarget() != null;
         }
 
         @Override
         public void stop() {
-            // 【核心修改】当AI结束时（敌人死亡或消失），重置导航
             this.blaze.getNavigation().stop();
         }
 
@@ -107,12 +138,11 @@ public class CombatBlaze extends TamableAnimal implements RangedAttackMob {
         public void tick() {
             LivingEntity target = this.blaze.getTarget();
             if (target == null || !target.isAlive()) {
-                return; // 目标消失，等待AI被停止
+                return;
             }
 
             this.blaze.getLookControl().setLookAt(target, 10.0F, 10.0F);
 
-            // 高度控制逻辑保持不变
             double desiredY = target.getY() + 3.0D;
             double yDiff = desiredY - this.blaze.getY();
             if (Math.abs(yDiff) > 0.5D) {
@@ -121,7 +151,6 @@ public class CombatBlaze extends TamableAnimal implements RangedAttackMob {
                 this.blaze.setDeltaMovement(this.blaze.getDeltaMovement().multiply(1, 0, 1));
             }
 
-            // 距离和攻击逻辑保持不变
             double distSqr = this.blaze.distanceToSqr(target);
             if (distSqr < 9.0D) {
                 Vec3 awayVec = this.blaze.position().subtract(target.position()).normalize();
@@ -138,7 +167,6 @@ public class CombatBlaze extends TamableAnimal implements RangedAttackMob {
         }
     }
 
-    // 【新增】闲置时的飞行/降落AI
     static class BlazeFloatGoal extends Goal {
         private final CombatBlaze blaze;
 
@@ -149,13 +177,11 @@ public class CombatBlaze extends TamableAnimal implements RangedAttackMob {
 
         @Override
         public boolean canUse() {
-            // 只有在没有目标且不在坐下时才启动
             return this.blaze.getTarget() == null && !this.blaze.isOrderedToSit();
         }
 
         @Override
         public void tick() {
-            // 如果不在地面上，就缓慢下降
             if (!this.blaze.onGround()) {
                 this.blaze.setDeltaMovement(this.blaze.getDeltaMovement().add(0, -0.04, 0));
             }
@@ -167,7 +193,17 @@ public class CombatBlaze extends TamableAnimal implements RangedAttackMob {
     @Override public boolean causeFallDamage(float pFallDistance, float pMultiplier, @NotNull DamageSource pSource) { return false; }
     @Override public boolean isFood(@NotNull ItemStack pStack) { return false; }
     @Nullable @Override public AgeableMob getBreedOffspring(@NotNull ServerLevel pLevel, @NotNull AgeableMob pOtherParent) { return null; }
-    @Override public @NotNull InteractionResult mobInteract(Player player, @NotNull InteractionHand hand) { if (this.isOwnedBy(player) && player.isShiftKeyDown() && player.getItemInHand(hand).isEmpty()) { if (!level().isClientSide) { this.setOrderedToSit(!this.isOrderedToSit()); } return InteractionResult.sidedSuccess(this.level().isClientSide()); } return super.mobInteract(player, hand); }
+    @Override public @NotNull InteractionResult mobInteract(Player player, @NotNull InteractionHand hand) {
+        InteractionResult result = super.mobInteract(player, hand);
+        if (result.consumesAction()) {
+            return result;
+        }
+        if (this.isOwnedBy(player) && player.isShiftKeyDown() && player.getItemInHand(hand).isEmpty()) {
+            if (!level().isClientSide) { this.setOrderedToSit(!this.isOrderedToSit()); }
+            return InteractionResult.sidedSuccess(this.level().isClientSide());
+        }
+        return InteractionResult.PASS;
+    }
     @Override protected SoundEvent getAmbientSound() { return SoundEvents.BLAZE_AMBIENT; }
     @Override protected SoundEvent getHurtSound(@NotNull DamageSource pDamageSource) { return SoundEvents.BLAZE_HURT; }
     @Override protected SoundEvent getDeathSound() { return SoundEvents.BLAZE_DEATH; }

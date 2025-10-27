@@ -10,6 +10,8 @@ import net.minecraft.nbt.StringTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.network.syncher.SynchedEntityData;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
@@ -35,6 +37,9 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
 
     private static final EntityDataAccessor<Integer> DATA_LEVEL = SynchedEntityData.defineId(AbstractWarriorEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> DATA_HAPPINESS = SynchedEntityData.defineId(AbstractWarriorEntity.class, EntityDataSerializers.INT);
+    // 【新增】追踪等级上限的数据
+    private static final EntityDataAccessor<Integer> DATA_LEVEL_CAP = SynchedEntityData.defineId(AbstractWarriorEntity.class, EntityDataSerializers.INT);
+
 
     private final Set<ResourceLocation> eatenDiningFoods = new HashSet<>();
     private final Set<ResourceLocation> eatenRitualFoods = new HashSet<>();
@@ -51,6 +56,8 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
         super.defineSynchedData(builder);
         builder.define(DATA_LEVEL, 1);
         builder.define(DATA_HAPPINESS, 0);
+        // 【新增】初始化等级上限为10
+        builder.define(DATA_LEVEL_CAP, 10);
     }
 
     @Override
@@ -58,6 +65,9 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
         super.addAdditionalSaveData(compound);
         compound.putInt("WarriorLevel", this.getWarriorLevel());
         compound.putInt("WarriorHappiness", this.getHappiness());
+        // 【新增】保存等级上限
+        compound.putInt("WarriorLevelCap", this.getLevelCap());
+
 
         ListTag eatenList = new ListTag();
         for (ResourceLocation foodId : this.eatenDiningFoods) {
@@ -77,6 +87,9 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
         super.readAdditionalSaveData(compound);
         this.setWarriorLevel(Math.max(1, compound.getInt("WarriorLevel")));
         this.setHappiness(Math.max(0, compound.getInt("WarriorHappiness")));
+        // 【新增】读取等级上限，如果不存在则默认为10
+        this.setLevelCap(compound.contains("WarriorLevelCap") ? compound.getInt("WarriorLevelCap") : 10);
+
 
         this.eatenDiningFoods.clear();
         ListTag eatenList = compound.getList("EatenDiningFoods", 8);
@@ -92,7 +105,6 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
 
         if (!this.level().isClientSide) {
             applyLevelBasedStats();
-            updateEatGoal();
         }
     }
 
@@ -104,7 +116,7 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
             if (this.level().isClientSide) return InteractionResult.CONSUME;
 
             if (isLevelCapped()) {
-                player.sendSystemMessage(Component.translatable("message.mob_friends.level_cap_stuck_block", this.getName()));
+                player.sendSystemMessage(Component.translatable("message.mob_friends.level_cap_stuck", this.getName()));
                 return InteractionResult.FAIL;
             }
 
@@ -135,62 +147,31 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
     }
 
     /**
-     * 由事件处理器调用，当战士吃掉一个方块后触发。
+     * 【重构】由事件处理器调用，当战士吃掉一个方块后触发。
      */
     public void handleRitualBlockEaten(BlockState eatenBlockState) {
-        if (this.level().isClientSide || !isLevelCapped()) return;
+        if (this.level().isClientSide) return;
 
         Block eatenBlock = eatenBlockState.getBlock();
         ResourceLocation blockId = BuiltInRegistries.BLOCK.getKey(eatenBlock);
 
-        // 【核心修复】使用清晰、直接的逻辑来判断方块是否正确
-        boolean isCorrectRitualBlock = false;
-        if (getWarriorLevel() == 10) {
-            isCorrectRitualBlock = getTier1RitualBlocks().contains(eatenBlock);
-        } else if (getWarriorLevel() == 20) {
-            isCorrectRitualBlock = getTier2RitualBlocks().contains(eatenBlock);
-        }
+        // 合并所有仪式食物
+        Set<Block> allRitualBlocks = new HashSet<>();
+        allRitualBlocks.addAll(getTier1RitualBlocks());
+        allRitualBlocks.addAll(getTier2RitualBlocks());
 
-        // 只有当吃掉的是正确的、且之前没吃过的仪式方块时，才继续处理
-        if (isCorrectRitualBlock && !this.eatenRitualFoods.contains(blockId)) {
+        // 如果吃的是一种新的仪式食物
+        if (allRitualBlocks.contains(eatenBlock) && !this.eatenRitualFoods.contains(blockId)) {
             this.eatenRitualFoods.add(blockId);
+            // 等级上限+10
+            this.setLevelCap(this.getLevelCap() + 10);
 
-            if (checkRitualCompletion()) {
-                // 所有仪式方块都吃完了，突破瓶颈
-                this.eatenRitualFoods.clear(); // 清空记录，为下一阶段做准备
-                this.setWarriorLevel(this.getWarriorLevel() + 1);
-                if (getOwner() instanceof Player player) {
-                    player.sendSystemMessage(Component.translatable("message.mob_friends.level_cap_broken", this.getName()));
-                }
-                this.playSound(SoundEvents.PLAYER_LEVELUP, 1.0f, 1.0f);
-            } else {
-                // 只吃了一部分
-                if (getOwner() instanceof Player player) {
-                    player.sendSystemMessage(Component.translatable("message.mob_friends.ate_ritual_food_partial", this.getName()));
-                }
-                this.playSound(SoundEvents.GENERIC_EAT, 1.0f, 1.2f);
+            if (getOwner() instanceof Player player) {
+                player.sendSystemMessage(Component.translatable("message.mob_friends.level_cap_increased", this.getName(), this.getLevelCap()));
             }
-        }
-    }
-
-    private boolean checkRitualCompletion() {
-        int level = getWarriorLevel();
-        if (level == 10) {
-            return this.eatenRitualFoods.size() >= getTier1RitualBlocks().size();
-        }
-        if (level == 20) {
-            // --- 【核心修复】 ---
-            // 将错误的 getTier1RitualBlocks() 修改为 getTier2RitualBlocks()
-            return this.eatenRitualFoods.size() >= getTier2RitualBlocks().size();
-        }
-        return false;
-    }
-
-    protected void updateEatGoal() {
-        if (this.eatBlockFoodGoal != null) {
-            this.goalSelector.removeGoal(this.eatBlockFoodGoal);
-            if (isLevelCapped()) {
-                this.goalSelector.addGoal(1, this.eatBlockFoodGoal);
+            this.playSound(SoundEvents.PLAYER_LEVELUP, 1.0f, 1.0f);
+            if (this.level() instanceof ServerLevel serverLevel) {
+                serverLevel.sendParticles(ParticleTypes.CHERRY_LEAVES, this.getRandomX(1.0D), this.getRandomY(), this.getRandomZ(1.0D)+0.5D, 40, 0.5, 0.5, 0.5, 0.1);
             }
         }
     }
@@ -201,7 +182,7 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
             boolean leveledUp = checkLevelUp(feedbackPlayer);
 
             if (!leveledUp && feedbackPlayer != null) {
-                if (this.getWarriorLevel() >= 30) {
+                if (isLevelCapped()) {
                     feedbackPlayer.sendSystemMessage(Component.translatable("message.mob_friends.ate_food_max_level", this.getName(), amount, this.getWarriorLevel()));
                 } else {
                     feedbackPlayer.sendSystemMessage(Component.translatable("message.mob_friends.ate_food", this.getName(), amount, this.getWarriorLevel(), this.getHappiness(), this.getHappinessForNextLevel()));
@@ -213,7 +194,8 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
     private boolean checkLevelUp(@Nullable Player feedbackPlayer) {
         boolean hasLeveledUp = false;
         int currentLevel = this.getWarriorLevel();
-        if (currentLevel >= 30) return false;
+        // 如果已经达到上限，则不升级
+        if (isLevelCapped()) return false;
 
         int happinessNeeded = getHappinessForNextLevel();
         while (this.getHappiness() >= happinessNeeded) {
@@ -221,11 +203,12 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
             this.setHappiness(this.getHappiness() - happinessNeeded);
             currentLevel++;
             this.setWarriorLevel(currentLevel);
-            this.playSound(SoundEvents.PLAYER_LEVELUP, 1.0F, 0.8F);
+            this.playSound(SoundEvents.EXPERIENCE_ORB_PICKUP, 1.0F, 0.8F);
             if (feedbackPlayer != null) {
                 feedbackPlayer.sendSystemMessage(Component.translatable("message.mob_friends.level_up", this.getName(), currentLevel));
             }
-            if (currentLevel >= 30 || isLevelCapped()) {
+            // 如果升级后达到上限，停止继续升级
+            if (isLevelCapped()) {
                 break;
             }
             happinessNeeded = getHappinessForNextLevel();
@@ -238,13 +221,17 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
         if (level < 10) return 30;
         if (level < 20) return 50;
         if (level < 30) return 100;
+        if (level < 40) return 150; // 为新的等级添加幸福感需求
         return Integer.MAX_VALUE;
     }
 
+    /**
+     * 【修改】现在使用动态等级上限
+     */
     public boolean isLevelCapped() {
-        int level = this.getWarriorLevel();
-        return level == 10 || level == 20;
+        return this.getWarriorLevel() >= this.getLevelCap();
     }
+
 
     public void applyLevelBasedStats() {
         if (this.level().isClientSide()) return;
@@ -276,7 +263,6 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
         this.entityData.set(DATA_LEVEL, Math.max(1, level));
         if (!this.level().isClientSide) {
             applyLevelBasedStats();
-            updateEatGoal();
         }
     }
 
@@ -286,5 +272,14 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
 
     public void setHappiness(int happiness) {
         this.entityData.set(DATA_HAPPINESS, happiness);
+    }
+
+    // 【新增】等级上限的Getter和Setter
+    public int getLevelCap() {
+        return this.entityData.get(DATA_LEVEL_CAP);
+    }
+
+    public void setLevelCap(int cap) {
+        this.entityData.set(DATA_LEVEL_CAP, cap);
     }
 }
