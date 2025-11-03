@@ -67,6 +67,12 @@ public class ModDataComponents {
                     .networkSynchronized(ByteBufCodecs.COMPOUND_TAG)
                     .build());
 
+    public static final Supplier<DataComponentType<Boolean>> IS_UPGRADED = COMPONENT_TYPES.register("is_upgraded",
+            () -> DataComponentType.<Boolean>builder()
+                    .persistent(Codec.BOOL)
+                    .networkSynchronized(ByteBufCodecs.BOOL)
+                    .build());
+
     public static void register(IEventBus eventBus) {
         COMPONENT_TYPES.register(eventBus);
     }

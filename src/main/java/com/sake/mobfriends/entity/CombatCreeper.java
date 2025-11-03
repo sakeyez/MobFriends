@@ -46,11 +46,13 @@ public class CombatCreeper extends AbstractWarriorEntity implements PowerableMob
 
     private static final EntityDataAccessor<Integer> DATA_SWELL_DIR = SynchedEntityData.defineId(CombatCreeper.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> DATA_POWERED = SynchedEntityData.defineId(CombatCreeper.class, EntityDataSerializers.BOOLEAN);
+    // --- 【核心修改】为技能添加数据追踪器 ---
+    private static final EntityDataAccessor<Boolean> DATA_HAS_FAST_EXPLOSION_SKILL = SynchedEntityData.defineId(CombatCreeper.class, EntityDataSerializers.BOOLEAN);
 
     private int swell;
-    private final int maxSwell = 30;
+    // 移除了 final，使其可以被修改
+    private int maxSwell = 30;
 
-    // 【新增】定义仪式食物
     private static final Set<Block> TIER_1_BLOCKS = Stream.of(
             ResourceLocation.fromNamespaceAndPath("kaleidoscope_cookery", "slime_ball_meal")
     ).map(BuiltInRegistries.BLOCK::get).filter(block -> block != Blocks.AIR).collect(Collectors.toSet());
@@ -59,13 +61,15 @@ public class CombatCreeper extends AbstractWarriorEntity implements PowerableMob
         super(type, level);
     }
 
+
     public static AttributeSupplier.@NotNull Builder createAttributes() {
         return Mob.createMobAttributes()
-                .add(Attributes.MAX_HEALTH, 40.0D)
-                .add(Attributes.MOVEMENT_SPEED, 0.25D)
-                .add(Attributes.ATTACK_DAMAGE, 5.0D) // 添加攻击力
-                .add(Attributes.ARMOR, 2.0D)       // 添加护甲
-                .add(Attributes.FOLLOW_RANGE, 32.0D);
+                // --- 【核心修改】设置初始属性和索敌范围 ---
+                .add(Attributes.MAX_HEALTH, 20.0D)
+                .add(Attributes.MOVEMENT_SPEED, 0.23D)
+                .add(Attributes.ATTACK_DAMAGE, 1.0D)
+                .add(Attributes.ARMOR, 2.0D)
+                .add(Attributes.FOLLOW_RANGE, 40.0D);
     }
 
     @Override
@@ -91,45 +95,31 @@ public class CombatCreeper extends AbstractWarriorEntity implements PowerableMob
         this.targetSelector.addGoal(3, new HurtByTargetGoal(this).setAlertOthers());
     }
 
-    // --- 【新增】成长属性实现 ---
-    @Override
-    protected double getHealthForLevel(int level) { return 40.0 + (level - 1) * 4.0; }
-    @Override
-    protected double getDamageForLevel(int level) { return 5.0 + (level - 1) * 0.75; }
-    @Override
-    protected double getSpeedForLevel(int level) { return 0.25 + (level - 1) * 0.002; }
-    @Override
-    protected double getArmorForLevel(int level) { return 2.0 + (level - 1) * 0.3; }
-    @Override
-    protected Set<Block> getTier1RitualBlocks() { return TIER_1_BLOCKS; }
-    @Override
-    protected Set<Block> getTier2RitualBlocks() { return Collections.emptySet(); } // 苦力怕暂时没有第二阶段
-
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder pBuilder) {
         super.defineSynchedData(pBuilder);
         pBuilder.define(DATA_SWELL_DIR, -1);
         pBuilder.define(DATA_POWERED, false);
-    }
-
-    @Override
-    public boolean isPowered() {
-        return this.entityData.get(DATA_POWERED);
+        pBuilder.define(DATA_HAS_FAST_EXPLOSION_SKILL, false);
     }
 
     @Override
     public void addAdditionalSaveData(CompoundTag pCompound) {
         super.addAdditionalSaveData(pCompound);
-        pCompound.putShort("Fuse", (short)this.maxSwell);
+        pCompound.putShort("Fuse", (short)this.getMaxSwell());
         if (this.isPowered()) {
             pCompound.putBoolean("powered", true);
         }
+        pCompound.putBoolean("HasFastExplosionSkill", this.hasFastExplosionSkill());
     }
 
     @Override
     public void readAdditionalSaveData(CompoundTag pCompound) {
         super.readAdditionalSaveData(pCompound);
         this.entityData.set(DATA_POWERED, pCompound.getBoolean("powered"));
+        this.entityData.set(DATA_HAS_FAST_EXPLOSION_SKILL, pCompound.getBoolean("HasFastExplosionSkill"));
+        // 读取后立即更新爆炸时间
+        updateFuseTime();
     }
 
     @Override
@@ -143,13 +133,80 @@ public class CombatCreeper extends AbstractWarriorEntity implements PowerableMob
             if (this.swell < 0) {
                 this.swell = 0;
             }
-            if (this.swell >= this.maxSwell) {
+            // 使用 getMaxSwell() 获取动态的爆炸时间
+            if (this.swell >= this.getMaxSwell()) {
                 this.swell = 0;
                 this.explode();
             }
         }
         super.tick();
     }
+
+    // --- 【核心修改】实现技能解锁和查询 ---
+    @Override
+    protected void onRitualFoodEaten(ResourceLocation foodId) {
+        if (foodId.getPath().equals("slime_ball_meal")) {
+            this.entityData.set(DATA_HAS_FAST_EXPLOSION_SKILL, true);
+            updateFuseTime(); // 解锁技能后立即更新爆炸时间
+        }
+    }
+
+    public boolean hasFastExplosionSkill() {
+        return this.entityData.get(DATA_HAS_FAST_EXPLOSION_SKILL);
+    }
+
+    // --- 【核心修改】获取动态的爆炸时间 ---
+    public int getMaxSwell() {
+        return this.maxSwell;
+    }
+
+    // 更新爆炸时间的辅助方法
+    private void updateFuseTime() {
+        if (this.hasFastExplosionSkill()) {
+            this.maxSwell = 10; // 30 / 3 = 10
+        } else {
+            this.maxSwell = 30;
+        }
+    }
+
+    public float getSwelling(float pPartialTicks) {
+        // 使用 getMaxSwell() 来正确计算膨胀百分比
+        return (this.swell + pPartialTicks) / (float)this.getMaxSwell();
+    }
+    // --- 【新增】成长属性实现 ---
+    @Override protected int getInitialLevelCap() { return 10; }
+    @Override protected int getLevelCapIncrease() { return 10; }
+
+    @Override protected double getInitialHealth() { return 20.0; }
+    @Override protected double getHealthPerLevel() { return 4.0; }
+
+    @Override protected double getInitialAttack() { return 1.0; }
+    @Override protected double getAttackPerLevel() { return 0.0; }
+
+    @Override protected double getInitialAttackMultiplier() { return 1.0; }
+    @Override protected double getAttackMultiplierPerLevel() { return 0.0; }
+
+    @Override protected double getInitialSpeed() { return 0.23; }
+    @Override protected double getSpeedPerLevel() { return 0.005; }
+
+    @Override protected float getDamageReductionPerLevel() { return 0.04f; }
+    @Override
+    protected Set<Block> getTier1RitualBlocks() { return TIER_1_BLOCKS; }
+    @Override
+    protected Set<Block> getTier2RitualBlocks() { return Collections.emptySet(); } // 苦力怕暂时没有第二阶段
+
+
+
+    @Override
+    public boolean isPowered() {
+        return this.entityData.get(DATA_POWERED);
+    }
+
+
+
+
+
+
 
     private void explode() {
         if (!this.level().isClientSide) {
@@ -186,21 +243,15 @@ public class CombatCreeper extends AbstractWarriorEntity implements PowerableMob
 
     public int getSwellDir() { return this.entityData.get(DATA_SWELL_DIR); }
     public void setSwellDir(int pState) { this.entityData.set(DATA_SWELL_DIR, pState); }
-    public float getSwelling(float pPartialTicks) { return (this.swell + pPartialTicks) / (float)this.maxSwell; }
-    @Override public @NotNull InteractionResult mobInteract(Player player, @NotNull InteractionHand hand) {
-        // 让父类的交互逻辑优先处理
-        InteractionResult result = super.mobInteract(player, hand);
-        if (result.consumesAction()) {
-            return result;
-        }
-        // 如果父类没处理，再执行坐下逻辑
-        if (this.isOwnedBy(player) && player.isShiftKeyDown() && player.getItemInHand(hand).isEmpty()) {
-            if (!level().isClientSide) {
-                this.setOrderedToSit(!this.isOrderedToSit());
-            }
-            return InteractionResult.sidedSuccess(this.level().isClientSide());
-        }
-        return InteractionResult.PASS;
+
+
+    @Override
+    public @NotNull InteractionResult mobInteract(Player player, @NotNull InteractionHand hand) {
+        // 【核心修改】
+        // 我们移除了之前关于“潜行+右键使其坐下”的逻辑。
+        // 现在，这个方法只会调用父类（AbstractWarriorEntity）的交互方法。
+        // 父类的方法包含了喂食和升级的逻辑，所以这些功能会被完整保留。
+        return super.mobInteract(player, hand);
     }
     @Override protected SoundEvent getHurtSound(@NotNull DamageSource pDamageSource) { return SoundEvents.CREEPER_HURT; }
     @Override protected SoundEvent getDeathSound() { return SoundEvents.CREEPER_DEATH; }

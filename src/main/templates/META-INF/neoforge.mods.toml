@@ -38,3 +38,10 @@ type="required"
 versionRange="[1.21.1,1.21.2)" #
 ordering="NONE"
 side="BOTH"
+
+[[dependencies.mob_friends]]
+modId="kaleidoscope_cookery"
+type="optional"
+versionRange="[0,)"       # 接受任何版本
+ordering="BEFORE"         # 关键：确保它在我们之前加载
+side="BOTH"

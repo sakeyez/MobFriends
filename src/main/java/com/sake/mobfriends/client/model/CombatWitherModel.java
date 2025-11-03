@@ -1,3 +1,5 @@
+// 文件路径: src/main/java/com/sake/mobfriends/client/model/CombatWitherModel.java
+
 package com.sake.mobfriends.client.model;
 
 import com.sake.mobfriends.entity.CombatWither;
@@ -10,23 +12,26 @@ public class CombatWitherModel extends HumanoidModel<CombatWither> {
     }
 
     /**
-     * 【新增】重写动画设置方法
+     * 【最终动画修复 - 整体协调版】
+     * 应用了为僵尸战士微调后的参数
      */
     @Override
     public void setupAnim(CombatWither pEntity, float pLimbSwing, float pLimbSwingAmount, float pAgeInTicks, float pNetHeadYaw, float pHeadPitch) {
-        // 同样，先调用父类方法处理基础动画
+        // 首先，运行父类的默认动画，这会设置好 this.riding 等状态
         super.setupAnim(pEntity, pLimbSwing, pLimbSwingAmount, pAgeInTicks, pNetHeadYaw, pHeadPitch);
 
-        // 检查坐下状态
-        if (pEntity.isInSittingPose()) {
-            // 覆盖腿部动画，让它坐下
-            this.rightLeg.xRot = -1.4137167F;
-            this.rightLeg.y = 12.0F;
-            this.rightLeg.z = 4.0F;
+        // --- 【核心修改】 ---
+        // 当实体被命令坐下(isInSittingPose)或作为乘客(riding)时，应用坐姿动画
+        if (this.riding || pEntity.isInSittingPose()) {
+            // 手臂自然下垂
+            this.rightArm.xRot = -0.75F;
+            this.leftArm.xRot = -0.75F;
 
-            this.leftLeg.xRot = -1.4137167F;
-            this.leftLeg.y = 12.0F;
-            this.leftLeg.z = 4.0F;
+            // 腿部弯曲并分开，形成坐姿
+            this.rightLeg.xRot = -1.4F;      // 右腿抬起
+            this.rightLeg.yRot = 0.4F;       // 右腿向外分开
+            this.leftLeg.xRot = -1.4F;       // 左腿抬起
+            this.leftLeg.yRot = -0.4F;       // 左腿向外分开
         }
     }
 }

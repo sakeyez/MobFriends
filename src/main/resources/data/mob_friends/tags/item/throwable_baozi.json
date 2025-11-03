@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "values": [
+    "kaleidoscope_cookery:baozi",
+    "mob_friends:soul_baozi",
+    "kaleidoscope_cookery:samsa",
+    "mob_friends:upgraded_soul_baozi",
+    "mob_friends:upgraded_samsa"
+  ]
+}

@@ -60,6 +60,13 @@ public class BrokenBlazeCore extends Item {
     }
 
     @Override
+    public Component getName(ItemStack pStack) {
+        // .plainCopy() 获取 lang 文件中的原始文本
+        // .withStyle(ChatFormatting.DARK_GRAY) 将其设为暗灰色
+        return super.getName(pStack).plainCopy().withStyle(ChatFormatting.DARK_GRAY);
+    }
+
+    @Override
     public void appendHoverText(ItemStack pStack, TooltipContext pContext, List<Component> pTooltipComponents, TooltipFlag pTooltipFlag) {
         pTooltipComponents.add(Component.translatable("tooltip.mob_friends.broken_zombie_core").withStyle(ChatFormatting.RED));
         pTooltipComponents.add(Component.translatable("tooltip.mob_friends.broken_zombie_core_repair").withStyle(ChatFormatting.GRAY));

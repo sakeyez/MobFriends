@@ -41,8 +41,13 @@ public class BrokenZombieCore extends AbstractCoreItem {
             // 1. 从破损核心中获取储存的僵尸完整数据
             CompoundTag zombieData = heldItem.get(ModDataComponents.STORED_ZOMBIE_NBT.get());
 
-            // 2. 如果数据存在，就把它原封不动地转移到新的激活核心里
             if (zombieData != null) {
+                // --- 【核心修复点】 ---
+                // 在转移数据前，手动将生命值重置为一个正数！
+                // 20.0F 是僵尸战士的初始基础生命值。
+                zombieData.putFloat("Health", 20.0F);
+
+                // 将修复好的数据复制到新的激活核心里
                 activeCore.set(ModDataComponents.STORED_ZOMBIE_NBT.get(), zombieData.copy());
             }
 
@@ -69,6 +74,13 @@ public class BrokenZombieCore extends AbstractCoreItem {
         }
 
         return InteractionResultHolder.fail(heldItem);
+    }
+
+    @Override
+    public Component getName(ItemStack pStack) {
+        // .plainCopy() 获取 lang 文件中的原始文本
+        // .withStyle(ChatFormatting.DARK_GRAY) 将其设为暗灰色
+        return super.getName(pStack).plainCopy().withStyle(ChatFormatting.DARK_GRAY);
     }
 
     @Override

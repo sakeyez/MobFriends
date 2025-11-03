@@ -203,7 +203,7 @@ dependencies {
     implementation "curse.maven:kaleidoscope-cookery-1309203:7057534"
 
     implementation "curse.maven:aquaculture-60028:6357106"
-    implementation "curse.maven:epic-fight-mod-405076:7132918"
+
 
 }
 

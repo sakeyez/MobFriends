@@ -5,6 +5,7 @@ import com.sake.mobfriends.init.ModDataComponents;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
+import com.sake.mobfriends.client.gui.CombatCoreTooltip;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -12,6 +13,7 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.inventory.tooltip.TooltipComponent;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -19,6 +21,7 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public class ActiveWitherCore extends Item {
@@ -55,6 +58,29 @@ public class ActiveWitherCore extends Item {
             nbt.putString("id", EntityType.getKey(wither.getType()).toString());
             stack.set(ModDataComponents.STORED_WITHER_NBT.get(), nbt);
         }
+    }
+
+    @Override
+    public Component getName(ItemStack pStack) {
+        // .plainCopy() 获取 lang 文件中的原始文本
+        // .withStyle(ChatFormatting.GOLD) 将其设为橙色 (GOLD 在 MC 中是橙色)
+        return super.getName(pStack).plainCopy().withStyle(ChatFormatting.GOLD);
+    }
+
+    @Override
+    public Optional<TooltipComponent> getTooltipImage(ItemStack stack) {
+        CompoundTag nbt = stack.get(ModDataComponents.STORED_WITHER_NBT.get());
+        if (nbt != null) {
+            // 【修改】读取所有需要的数据
+            int level = nbt.getInt("WarriorLevel");
+            int happiness = nbt.getInt("WarriorHappiness");
+            int levelCap = nbt.getInt("WarriorLevelCap");
+            int diningFoodsCount = nbt.contains("EatenDiningFoods", 9) ? nbt.getList("EatenDiningFoods", 8).size() : 0;
+            int ritualFoodsCount = nbt.contains("EatenRitualFoods", 9) ? nbt.getList("EatenRitualFoods", 8).size() : 0;
+
+            return Optional.of(new CombatCoreTooltip(nbt, level, happiness, levelCap, diningFoodsCount, ritualFoodsCount));
+        }
+        return Optional.empty();
     }
 
     @Override public boolean isFoil(ItemStack pStack) { return pStack.has(ModDataComponents.STORED_WITHER_NBT.get()); }

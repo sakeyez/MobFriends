@@ -1,3 +1,5 @@
+// 文件路径: src/main/java/com/sake/mobfriends/entity/AbstractWarriorEntity.java
+
 package com.sake.mobfriends.entity;
 
 import com.sake.mobfriends.entity.ai.EatBlockFoodGoal;
@@ -17,6 +19,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -37,14 +40,13 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
 
     private static final EntityDataAccessor<Integer> DATA_LEVEL = SynchedEntityData.defineId(AbstractWarriorEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> DATA_HAPPINESS = SynchedEntityData.defineId(AbstractWarriorEntity.class, EntityDataSerializers.INT);
-    // 【新增】追踪等级上限的数据
     private static final EntityDataAccessor<Integer> DATA_LEVEL_CAP = SynchedEntityData.defineId(AbstractWarriorEntity.class, EntityDataSerializers.INT);
-
+    private static final EntityDataAccessor<Float> DATA_DAMAGE_REDUCTION = SynchedEntityData.defineId(AbstractWarriorEntity.class, EntityDataSerializers.FLOAT);
 
     private final Set<ResourceLocation> eatenDiningFoods = new HashSet<>();
     private final Set<ResourceLocation> eatenRitualFoods = new HashSet<>();
 
-    protected EatBlockFoodGoal eatBlockFoodGoal;
+    public EatBlockFoodGoal eatBlockFoodGoal;
 
     public AbstractWarriorEntity(EntityType<? extends TamableAnimal> type, Level level) {
         super(type, level);
@@ -54,10 +56,10 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
-        builder.define(DATA_LEVEL, 1);
+        builder.define(DATA_LEVEL, 0);
         builder.define(DATA_HAPPINESS, 0);
-        // 【新增】初始化等级上限为10
-        builder.define(DATA_LEVEL_CAP, 10);
+        builder.define(DATA_LEVEL_CAP, this.getInitialLevelCap());
+        builder.define(DATA_DAMAGE_REDUCTION, 0.0f);
     }
 
     @Override
@@ -65,9 +67,8 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
         super.addAdditionalSaveData(compound);
         compound.putInt("WarriorLevel", this.getWarriorLevel());
         compound.putInt("WarriorHappiness", this.getHappiness());
-        // 【新增】保存等级上限
         compound.putInt("WarriorLevelCap", this.getLevelCap());
-
+        compound.putFloat("DamageReduction", this.getDamageReduction());
 
         ListTag eatenList = new ListTag();
         for (ResourceLocation foodId : this.eatenDiningFoods) {
@@ -85,11 +86,10 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
     @Override
     public void readAdditionalSaveData(CompoundTag compound) {
         super.readAdditionalSaveData(compound);
-        this.setWarriorLevel(Math.max(1, compound.getInt("WarriorLevel")));
+        this.setWarriorLevel(Math.max(0, compound.getInt("WarriorLevel")));
         this.setHappiness(Math.max(0, compound.getInt("WarriorHappiness")));
-        // 【新增】读取等级上限，如果不存在则默认为10
-        this.setLevelCap(compound.contains("WarriorLevelCap") ? compound.getInt("WarriorLevelCap") : 10);
-
+        this.setLevelCap(compound.contains("WarriorLevelCap") ? compound.getInt("WarriorLevelCap") : this.getInitialLevelCap());
+        this.setDamageReduction(compound.getFloat("DamageReduction"));
 
         this.eatenDiningFoods.clear();
         ListTag eatenList = compound.getList("EatenDiningFoods", 8);
@@ -108,6 +108,18 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
         }
     }
 
+    /**
+     * 【核心修复】重写 hurt 方法来统一处理免伤。
+     * 这比使用事件监听器更稳定，且符合原版逻辑。
+     */
+    @Override
+    public boolean hurt(@NotNull DamageSource pSource, float pAmount) {
+        float reduction = this.getDamageReduction();
+        // 计算免伤后的实际伤害
+        float finalDamage = pAmount * (1.0F - reduction);
+        return super.hurt(pSource, finalDamage);
+    }
+
     @Override
     public @NotNull InteractionResult mobInteract(Player player, @NotNull InteractionHand hand) {
         ItemStack heldItem = player.getItemInHand(hand);
@@ -122,16 +134,15 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
 
             FoodProperties foodProperties = heldItem.get(DataComponents.FOOD);
             if (foodProperties != null) {
-                int nutrition = foodProperties.nutrition();
-                float happinessGain = nutrition;
+                float baseValue = foodProperties.nutrition() + foodProperties.saturation();
+                float bonusMultiplier = 1.0f + 0.1f * eatenDiningFoods.size();
+                int happinessGain = (int) (baseValue * bonusMultiplier);
+
                 ResourceLocation foodId = BuiltInRegistries.ITEM.getKey(heldItem.getItem());
 
                 if (heldItem.is(ModTags.Items.DINING_FOODS)) {
                     if (!eatenDiningFoods.contains(foodId)) {
-                        float bonusMultiplier = 1.0f + 0.1f * eatenDiningFoods.size();
-                        happinessGain *= bonusMultiplier;
                         eatenDiningFoods.add(foodId);
-                        player.sendSystemMessage(Component.translatable("message.mob_friends.ate_dining_food", this.getName(), (int) happinessGain));
                     }
                 }
 
@@ -139,32 +150,30 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
                     heldItem.shrink(1);
                 }
                 this.playSound(SoundEvents.GENERIC_EAT, 1.0F, 1.0F);
-                this.addHappiness((int) happinessGain, player);
+                this.addHappiness(happinessGain, player);
                 return InteractionResult.SUCCESS;
             }
         }
+
         return super.mobInteract(player, hand);
     }
 
-    /**
-     * 【重构】由事件处理器调用，当战士吃掉一个方块后触发。
-     */
     public void handleRitualBlockEaten(BlockState eatenBlockState) {
         if (this.level().isClientSide) return;
 
         Block eatenBlock = eatenBlockState.getBlock();
         ResourceLocation blockId = BuiltInRegistries.BLOCK.getKey(eatenBlock);
 
-        // 合并所有仪式食物
         Set<Block> allRitualBlocks = new HashSet<>();
         allRitualBlocks.addAll(getTier1RitualBlocks());
         allRitualBlocks.addAll(getTier2RitualBlocks());
 
-        // 如果吃的是一种新的仪式食物
         if (allRitualBlocks.contains(eatenBlock) && !this.eatenRitualFoods.contains(blockId)) {
             this.eatenRitualFoods.add(blockId);
-            // 等级上限+10
-            this.setLevelCap(this.getLevelCap() + 10);
+            this.setLevelCap(this.getLevelCap() + this.getLevelCapIncrease());
+
+            // 通知子类吃下了特定的仪式食物，以解锁技能
+            this.onRitualFoodEaten(blockId);
 
             if (getOwner() instanceof Player player) {
                 player.sendSystemMessage(Component.translatable("message.mob_friends.level_cap_increased", this.getName(), this.getLevelCap()));
@@ -193,21 +202,18 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
 
     private boolean checkLevelUp(@Nullable Player feedbackPlayer) {
         boolean hasLeveledUp = false;
-        int currentLevel = this.getWarriorLevel();
-        // 如果已经达到上限，则不升级
         if (isLevelCapped()) return false;
 
         int happinessNeeded = getHappinessForNextLevel();
         while (this.getHappiness() >= happinessNeeded) {
             hasLeveledUp = true;
             this.setHappiness(this.getHappiness() - happinessNeeded);
-            currentLevel++;
-            this.setWarriorLevel(currentLevel);
+            int currentLevel = this.getWarriorLevel() + 1;
+            this.setWarriorLevel(currentLevel); // 这会触发属性和免伤的重新计算
             this.playSound(SoundEvents.EXPERIENCE_ORB_PICKUP, 1.0F, 0.8F);
             if (feedbackPlayer != null) {
                 feedbackPlayer.sendSystemMessage(Component.translatable("message.mob_friends.level_up", this.getName(), currentLevel));
             }
-            // 如果升级后达到上限，停止继续升级
             if (isLevelCapped()) {
                 break;
             }
@@ -217,52 +223,80 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
     }
 
     public int getHappinessForNextLevel() {
-        int level = this.getWarriorLevel();
-        if (level < 10) return 30;
-        if (level < 20) return 50;
-        if (level < 30) return 100;
-        if (level < 40) return 150; // 为新的等级添加幸福感需求
-        return Integer.MAX_VALUE;
+        int baseRequirement = 100;
+        double ritualMultiplier = 1.0 + 0.5 * this.eatenRitualFoods.size();
+        return (int) (baseRequirement * ritualMultiplier);
     }
 
-    /**
-     * 【修改】现在使用动态等级上限
-     */
     public boolean isLevelCapped() {
         return this.getWarriorLevel() >= this.getLevelCap();
     }
 
-
     public void applyLevelBasedStats() {
         if (this.level().isClientSide()) return;
-        AttributeInstance health = this.getAttribute(Attributes.MAX_HEALTH);
-        AttributeInstance damage = this.getAttribute(Attributes.ATTACK_DAMAGE);
-        AttributeInstance speed = this.getAttribute(Attributes.MOVEMENT_SPEED);
-        AttributeInstance armor = this.getAttribute(Attributes.ARMOR);
+        int level = this.getWarriorLevel();
 
-        if (health != null) health.setBaseValue(getHealthForLevel(this.getWarriorLevel()));
-        if (damage != null) damage.setBaseValue(getDamageForLevel(this.getWarriorLevel()));
-        if (speed != null) speed.setBaseValue(getSpeedForLevel(this.getWarriorLevel()));
-        if (armor != null) armor.setBaseValue(getArmorForLevel(this.getWarriorLevel()));
+        getAttribute(Attributes.MAX_HEALTH).setBaseValue(getInitialHealth() + getHealthPerLevel() * level);
+        getAttribute(Attributes.MOVEMENT_SPEED).setBaseValue(getInitialSpeed() + getSpeedPerLevel() * level);
+
+        double baseAttack = getInitialAttack() + getAttackPerLevel() * level;
+        double multiplier = getInitialAttackMultiplier() + getAttackMultiplierPerLevel() * level;
+        getAttribute(Attributes.ATTACK_DAMAGE).setBaseValue(baseAttack * multiplier);
 
         this.heal(this.getMaxHealth());
     }
 
-    protected abstract double getHealthForLevel(int level);
-    protected abstract double getDamageForLevel(int level);
-    protected abstract double getSpeedForLevel(int level);
-    protected abstract double getArmorForLevel(int level);
+    // --- 抽象方法，强制子类实现 ---
+    protected abstract int getInitialLevelCap();
+    protected abstract int getLevelCapIncrease();
+    protected abstract double getInitialHealth();
+    protected abstract double getHealthPerLevel();
+    protected abstract double getInitialAttack();
+    protected abstract double getAttackPerLevel();
+    protected abstract double getInitialAttackMultiplier();
+    protected abstract double getAttackMultiplierPerLevel();
+    protected abstract double getInitialSpeed();
+    protected abstract double getSpeedPerLevel();
+    protected abstract float getDamageReductionPerLevel();
+    protected abstract void onRitualFoodEaten(ResourceLocation foodId);
     protected abstract Set<Block> getTier1RitualBlocks();
     protected abstract Set<Block> getTier2RitualBlocks();
+
+    /**
+     * 获取由技能等提供的额外固定免伤值。
+     * 子类可以重写此方法以添加技能带来的免伤。
+     */
+    protected float getBonusDamageReduction() {
+        return 0.0f;
+    }
+
+    // --- Getters 和 Setters ---
+    public float getDamageReduction() {
+        return this.entityData.get(DATA_DAMAGE_REDUCTION);
+    }
+
+    public void setDamageReduction(float reduction) {
+        this.entityData.set(DATA_DAMAGE_REDUCTION, reduction);
+    }
 
     public int getWarriorLevel() {
         return this.entityData.get(DATA_LEVEL);
     }
 
+    /**
+     * 【核心修复】修正 setWarriorLevel 方法，不再使用 @Override 和 super
+     */
     public void setWarriorLevel(int level) {
-        this.entityData.set(DATA_LEVEL, Math.max(1, level));
+        // 1. 设置等级数据
+        this.entityData.set(DATA_LEVEL, Math.max(0, level));
+
+        // 2. 在服务器端，重新计算所有属性和免伤
         if (!this.level().isClientSide) {
+            // 重新应用血量、攻击、速度等属性
             applyLevelBasedStats();
+            // 重新计算并存储总免伤（等级成长免伤 + 技能额外免伤）
+            float totalReduction = Math.min(1.0f, (getDamageReductionPerLevel() * level) + getBonusDamageReduction());
+            this.setDamageReduction(totalReduction);
         }
     }
 
@@ -274,7 +308,6 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
         this.entityData.set(DATA_HAPPINESS, happiness);
     }
 
-    // 【新增】等级上限的Getter和Setter
     public int getLevelCap() {
         return this.entityData.get(DATA_LEVEL_CAP);
     }

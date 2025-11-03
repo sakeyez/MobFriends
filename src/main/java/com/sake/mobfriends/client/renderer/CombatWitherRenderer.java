@@ -6,7 +6,7 @@ import com.sake.mobfriends.client.model.CombatWitherModel;
 import com.sake.mobfriends.entity.CombatWither;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.HumanoidModel;
-import net.minecraft.client.model.geom.ModelLayers; // <-- 导入
+import net.minecraft.client.model.geom.ModelLayers;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
 import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
@@ -20,16 +20,28 @@ public class CombatWitherRenderer extends HumanoidMobRenderer<CombatWither, Comb
             "minecraft", "textures/entity/skeleton/wither_skeleton.png");
 
     public CombatWitherRenderer(EntityRendererProvider.Context context) {
-        // 【核心修改】使用原版的 WITHER_SKELETON 模型层！
         super(context, new CombatWitherModel(context.bakeLayer(ModelLayers.WITHER_SKELETON)), 0.5F);
 
-        // 【核心修改】添加盔甲和物品层，并使用我们为凋零战士定义的专属盔甲层
         this.addLayer(new HumanoidArmorLayer<>(this,
                 new HumanoidModel<>(context.bakeLayer(ClientSetup.COMBAT_WITHER_INNER_ARMOR_LAYER)),
                 new HumanoidModel<>(context.bakeLayer(ClientSetup.COMBAT_WITHER_OUTER_ARMOR_LAYER)),
                 Minecraft.getInstance().getModelManager()
         ));
         this.addLayer(new ItemInHandLayer<>(this, context.getItemInHandRenderer()));
+    }
+
+
+    @Override
+    public void render(CombatWither pEntity, float pEntityYaw, float pPartialTicks, PoseStack pPoseStack, net.minecraft.client.renderer.MultiBufferSource pBuffer, int pPackedLight) {
+        // 如果实体正在坐下，或者它是一个乘客
+        if (pEntity.isInSittingPose() || pEntity.isPassenger()) {
+            // 向下平移以防止模型悬空。这个值是从僵尸战士复制过来的。
+            // 因为凋零骷髅模型更高，如果效果不完美，可以单独微调这个值（比如 -0.8D）。
+            pPoseStack.translate(0.0D, -0.8D, 0.0D);
+        }
+
+        // 调用父类的原始render方法，让它在调整过的画布上进行后续渲染
+        super.render(pEntity, pEntityYaw, pPartialTicks, pPoseStack, pBuffer, pPackedLight);
     }
 
     @Override
@@ -40,7 +52,6 @@ public class CombatWitherRenderer extends HumanoidMobRenderer<CombatWither, Comb
     @Override
     protected void scale(CombatWither wither, PoseStack poseStack, float partialTickTime) {
         float scale = wither.getScale();
-        // 凋零骷髅本身就比普通生物高，所以我们可能需要调整基础缩放值
         poseStack.scale(scale, scale, scale);
     }
 }

@@ -2,11 +2,11 @@ package com.sake.mobfriends.client;
 
 import com.sake.mobfriends.MobFriends;
 import com.sake.mobfriends.client.gui.ZombieChestScreen;
-import com.sake.mobfriends.client.gui.ZombieCoreTooltip;
-import com.sake.mobfriends.client.gui.ZombieCoreTooltipRenderer;
+import com.sake.mobfriends.client.gui.CombatCoreTooltip;
+import com.sake.mobfriends.client.gui.CombatCoreTooltipRenderer;
 import com.sake.mobfriends.client.model.CombatBlazeModel;
 import com.sake.mobfriends.client.model.CombatCreeperModel;
-import com.sake.mobfriends.client.model.CombatWitherModel;
+import net.minecraft.resources.ResourceLocation;
 import com.sake.mobfriends.client.model.CombatZombieModel;
 import com.sake.mobfriends.client.renderer.CombatBlazeRenderer;
 import com.sake.mobfriends.client.renderer.CombatCreeperRenderer;
@@ -19,7 +19,6 @@ import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.renderer.entity.*;
-import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -36,7 +35,7 @@ public class ClientSetup {
     public static final ModelLayerLocation COMBAT_ZOMBIE_OUTER_ARMOR_LAYER = new ModelLayerLocation(
             ResourceLocation.fromNamespaceAndPath(MobFriends.MOD_ID, "combat_zombie_outer_armor"), "main");
 
-    // --- 【新增】像1.20.1版本一样，为凋零战士定义专属的盔甲模型层 ---
+    //
     public static final ModelLayerLocation COMBAT_WITHER_INNER_ARMOR_LAYER = new ModelLayerLocation(
             ResourceLocation.fromNamespaceAndPath(MobFriends.MOD_ID, "combat_wither_inner_armor"), "main");
     public static final ModelLayerLocation COMBAT_WITHER_OUTER_ARMOR_LAYER = new ModelLayerLocation(
@@ -71,6 +70,8 @@ public class ClientSetup {
         event.registerLayerDefinition(CombatBlazeModel.LAYER_LOCATION, CombatBlazeModel::createBodyLayer);
     }
 
+
+
     // (GUI和Tooltip的注册保持不变)
     @SubscribeEvent
     public static void onRegisterMenuScreens(final RegisterMenuScreensEvent event) {
@@ -78,6 +79,6 @@ public class ClientSetup {
     }
     @SubscribeEvent
     public static void onRegisterTooltipFactories(final RegisterClientTooltipComponentFactoriesEvent event) {
-        event.register(ZombieCoreTooltip.class, ZombieCoreTooltipRenderer::new);
+        event.register(CombatCoreTooltip.class, CombatCoreTooltipRenderer::new);
     }
 }

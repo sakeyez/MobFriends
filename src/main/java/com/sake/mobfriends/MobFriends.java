@@ -9,6 +9,7 @@ import com.sake.mobfriends.network.NpcPacketHandler;
 import net.minecraft.core.registries.Registries;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
+import com.sake.mobfriends.init.*;
 import com.sake.mobfriends.util.FishConversionHelper;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
@@ -39,6 +40,7 @@ public class MobFriends {
         ModAttachments.ATTACHMENT_TYPES.register(modEventBus);
         ModMenuTypes.register(modEventBus);
         ModDataComponents.register(modEventBus);
+        ModEffects.register(modEventBus);
     }
 
     private void commonSetup(final FMLCommonSetupEvent event) {

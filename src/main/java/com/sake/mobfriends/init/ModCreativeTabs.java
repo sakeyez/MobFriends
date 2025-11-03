@@ -40,6 +40,7 @@ public class ModCreativeTabs {
                         pOutput.accept(ModItems.COIN.get());
                         pOutput.accept(ModItems.POWDER.get());
 
+                        pOutput.accept(ModItems.SOUL_BAOZI.get());
 
                         pOutput.accept(ModItems.ZOMBIE_NPC_SPAWN_EGG.get());
                         pOutput.accept(ModItems.SKELETON_NPC_SPAWN_EGG.get());

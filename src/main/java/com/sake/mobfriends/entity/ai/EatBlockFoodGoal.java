@@ -34,7 +34,7 @@ public class EatBlockFoodGoal extends Goal {
     private int eatingCooldown;
     private int findNewTargetCooldown;
     private int searchCooldown = 0;
-
+    private boolean isRunning = false; // 【新增】用于从外部判断此AI是否在运行
     public EatBlockFoodGoal(PathfinderMob mob, double speedModifier, int searchRange, Predicate<Block> foodBlockPredicate) {
         this.mob = mob;
         this.speedModifier = speedModifier;
@@ -42,7 +42,7 @@ public class EatBlockFoodGoal extends Goal {
         this.foodBlockPredicate = foodBlockPredicate;
         this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK, Flag.JUMP));
     }
-    
+
 
     @Override
     public boolean canUse() {
@@ -69,12 +69,19 @@ public class EatBlockFoodGoal extends Goal {
     public void start() {
         this.eatingCooldown = 0;
         this.findNewTargetCooldown = 0;
+        this.isRunning = true; // 【新增】标记为开始运行
     }
 
     @Override
     public void stop() {
         this.mob.removeEffect(MobEffects.GLOWING);
         this.targetPos = null;
+        this.isRunning = false; // 【新增】标记为停止运行
+    }
+
+    // 【新增】公开的getter方法
+    public boolean isRunning() {
+        return this.isRunning;
     }
 
 
@@ -100,26 +107,28 @@ public class EatBlockFoodGoal extends Goal {
         double verticalDist = Math.abs(this.mob.getY() - this.targetPos.getY());
 
         if (horizontalDistSq > 2.25 || verticalDist > 1) {
-            this.mob.getNavigation().moveTo(this.targetPos.getX() + 0.5, this.targetPos.getY(), this.targetPos.getZ() + 0.5, this.speedModifier);
+            // --- 【核心修改】 ---
+            // 不再使用地面寻路，而是使用通用的移动控制器。
+            // 这使得飞行生物也能正确移动到目标点。
+            this.mob.getMoveControl().setWantedPosition(this.targetPos.getX() + 0.5, this.targetPos.getY(), this.targetPos.getZ() + 0.5, this.speedModifier);
+
             if (!this.mob.hasEffect(MobEffects.GLOWING)) {
                 this.mob.addEffect(new MobEffectInstance(MobEffects.GLOWING, 60, 0, false, false));
             }
         } else {
+            // 到达目标后，停止移动
             this.mob.getNavigation().stop();
+            this.mob.setDeltaMovement(Vec3.ZERO); // 对飞行生物尤其重要，清除动量
             this.mob.removeEffect(MobEffects.GLOWING);
 
-            // 如果还在冷却中，则不做任何事
             if (this.eatingCooldown > 0) {
                 this.eatingCooldown--;
                 return;
             }
 
-            // --- 冷却结束，执行“咬一口”的动作 ---
             Level level = this.mob.level();
             BlockState state = level.getBlockState(this.targetPos);
             this.mob.playSound(SoundEvents.GENERIC_EAT, 1.0F, 1.0F);
-            // --- 核心修正点：将Glow粒子生成移到这里 ---
-            // 只有在“咬”的那一刻才触发
             if (level instanceof ServerLevel serverLevel) {
                 serverLevel.sendParticles(
                         ParticleTypes.GLOW,
@@ -128,12 +137,9 @@ public class EatBlockFoodGoal extends Goal {
                         this.mob.getRandomZ(0.5D),
                         5, 0, 0, 0, 0.02D);
             }
-            // --- 修正点结束 ---
 
-            // 为方块生成碎屑粒子
             spawnEatingParticles(level, this.targetPos, state);
 
-            // 处理方块状态变化
             Optional<IntegerProperty> bitesProperty = getBitesProperty(state);
             if (bitesProperty.isPresent()) {
                 IntegerProperty prop = bitesProperty.get();
@@ -154,12 +160,10 @@ public class EatBlockFoodGoal extends Goal {
                 this.targetPos = null;
             }
 
-            // 重置冷却计时器
             this.eatingCooldown = 7;
         }
     }
 
-    // ... (onEatFood 和其他辅助方法保持不变) ...
     private void onEatFood(Level level, BlockState eatenState, boolean finished) {
         if (!level.isClientSide) {
             this.mob.heal(2.0F);

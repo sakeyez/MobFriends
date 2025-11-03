@@ -1,3 +1,5 @@
+// 文件路径: src/main/java/com/sake/mobfriends/client/renderer/CombatZombieRenderer.java
+
 package com.sake.mobfriends.client.renderer;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -11,10 +13,12 @@ import net.minecraft.client.renderer.entity.HumanoidMobRenderer;
 import net.minecraft.client.renderer.entity.layers.HumanoidArmorLayer;
 import net.minecraft.client.renderer.entity.layers.ItemInHandLayer;
 import net.minecraft.resources.ResourceLocation;
+import com.mojang.blaze3d.vertex.PoseStack;
 import org.jetbrains.annotations.NotNull;
 
 public class CombatZombieRenderer extends HumanoidMobRenderer<CombatZombie, CombatZombieModel<CombatZombie>> {
 
+    // 1. 定义材质文件的路径
     private static final ResourceLocation ZOMBIE_LOCATION = ResourceLocation.fromNamespaceAndPath("minecraft", "textures/entity/zombie/zombie.png");
 
     public CombatZombieRenderer(EntityRendererProvider.Context context) {
@@ -30,13 +34,24 @@ public class CombatZombieRenderer extends HumanoidMobRenderer<CombatZombie, Comb
     }
 
     @Override
-    public @NotNull ResourceLocation getTextureLocation(@NotNull CombatZombie entity) {
-        return ZOMBIE_LOCATION;
+    public void render(CombatZombie pEntity, float pEntityYaw, float pPartialTicks, PoseStack pPoseStack, net.minecraft.client.renderer.MultiBufferSource pBuffer, int pPackedLight) {
+        // 如果实体正在坐下
+        if (pEntity.isInSittingPose() || pEntity.isPassenger()) {
+            // 向下平移
+            pPoseStack.translate(0.0D, -0.7D, 0.0D);
+        }
+
+        // 调用父类的原始render方法，让它在调整过的画布上进行后续渲染
+        super.render(pEntity, pEntityYaw, pPartialTicks, pPoseStack, pBuffer, pPackedLight);
     }
 
-    // --- 【最终正确修复】 ---
-    // 移除旧的、错误的 setupRotations 方法
-    // 使用新的、专门用于缩放的 scale 方法
+    // --- 【这就是解决问题的核心代码】 ---
+    // 2. 实现这个方法，返回上面定义的路径
+    @Override
+    public @NotNull ResourceLocation getTextureLocation(@NotNull CombatZombie entity) {
+        return ZOMBIE_LOCATION; //
+    }
+
     @Override
     protected void scale(CombatZombie zombie, PoseStack poseStack, float partialTickTime) {
         float scale = zombie.getScale();

@@ -4,6 +4,8 @@ import com.sake.mobfriends.MobFriends;
 import com.sake.mobfriends.item.*;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.food.FoodProperties;
+import net.minecraft.world.item.Rarity;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.DeferredSpawnEggItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
@@ -14,6 +16,9 @@ public class ModItems {
     public static final DeferredRegister<Item> ITEMS =
             DeferredRegister.create(BuiltInRegistries.ITEM, MobFriends.MOD_ID);
 
+    private static final FoodProperties SOUL_BAOZI_FOOD = new FoodProperties.Builder().nutrition(5)
+            .saturationModifier(0.6F)
+            .build();
     // --- 核心物品 (Cores) ---
     public static final Supplier<Item> ZOMBIE_CORE = ITEMS.register("zombie_core",
             () -> new ZombieCore(new Item.Properties().stacksTo(1))); // <-- 修正
@@ -64,6 +69,20 @@ public class ModItems {
             () -> new Item(new Item.Properties()));
     public static final Supplier<Item> POWDER = ITEMS.register("powder",
             () -> new Item(new Item.Properties()));
+
+    //灵魂包子
+    public static final Supplier<Item> SOUL_BAOZI = ITEMS.register("soul_baozi",
+            () -> new Item(new Item.Properties().food(SOUL_BAOZI_FOOD)));
+    //澎湃灵魂包
+    public static final Supplier<Item> UPGRADED_SOUL_BAOZI = ITEMS.register("upgraded_soul_baozi",
+            () -> new Item(new Item.Properties().food(
+                    new FoodProperties.Builder().nutrition(10).saturationModifier(1.2f).build()
+            ).rarity(Rarity.RARE))); // 让它显示为稀有
+    // 喷香烤包子
+    public static final Supplier<Item> UPGRADED_SAMSA = ITEMS.register("upgraded_samsa",
+            () -> new Item(new Item.Properties().food(
+                    new FoodProperties.Builder().nutrition(10).saturationModifier(1.2f).build()
+            ).rarity(Rarity.RARE))); // 让它显示为稀有
 
     // 刷怪蛋
 

@@ -1,12 +1,13 @@
 package com.sake.mobfriends.item;
 
-import com.sake.mobfriends.client.gui.ZombieCoreTooltip;
+import com.sake.mobfriends.client.gui.CombatCoreTooltip;
 import com.sake.mobfriends.entity.CombatZombie;
 import com.sake.mobfriends.init.ModDataComponents;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import com.sake.mobfriends.client.gui.CombatCoreTooltip;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -78,10 +79,25 @@ public class ActiveZombieCore extends AbstractCoreItem {
     }
 
     @Override
+    public Component getName(ItemStack pStack) {
+        // .plainCopy() 获取 lang 文件中的原始文本
+        // .withStyle(ChatFormatting.GOLD) 将其设为橙色 (GOLD 在 MC 中是橙色)
+        return super.getName(pStack).plainCopy().withStyle(ChatFormatting.GOLD);
+    }
+
+    @Override
     public Optional<TooltipComponent> getTooltipImage(ItemStack stack) {
         CompoundTag nbt = stack.get(ModDataComponents.STORED_ZOMBIE_NBT.get());
         if (nbt != null) {
-            return Optional.of(new ZombieCoreTooltip(nbt));
+            // 【修改】读取所有需要的数据
+            int level = nbt.getInt("WarriorLevel");
+            int happiness = nbt.getInt("WarriorHappiness");
+            int levelCap = nbt.getInt("WarriorLevelCap");
+            // 8 是 ListTag 的 NBT ID
+            int diningFoodsCount = nbt.contains("EatenDiningFoods", 9) ? nbt.getList("EatenDiningFoods", 8).size() : 0;
+            int ritualFoodsCount = nbt.contains("EatenRitualFoods", 9) ? nbt.getList("EatenRitualFoods", 8).size() : 0;
+
+            return Optional.of(new CombatCoreTooltip(nbt, level, happiness, levelCap, diningFoodsCount, ritualFoodsCount));
         }
         return Optional.empty();
     }

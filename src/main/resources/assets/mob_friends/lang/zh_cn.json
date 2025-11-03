@@ -4,16 +4,16 @@
   "modid.mob_friends": "止戈为友",
 
   "item.mob_friends.zombie_core": "僵尸核心",
-  "item.mob_friends.active_zombie_core": "激活的僵尸核心",
+  "item.mob_friends.active_zombie_core": "僵尸核心",
   "item.mob_friends.broken_zombie_core": "破碎的僵尸核心",
   "item.mob_friends.wither_core": "凋灵核心",
-  "item.mob_friends.active_wither_core": "激活的凋灵核心",
+  "item.mob_friends.active_wither_core": "凋灵核心",
   "item.mob_friends.broken_wither_core": "破碎的凋灵核心",
   "item.mob_friends.creeper_core": "苦力怕核心",
-  "item.mob_friends.active_creeper_core": "激活的苦力怕核心",
+  "item.mob_friends.active_creeper_core": "苦力怕核心",
   "item.mob_friends.broken_creeper_core": "破碎的苦力怕核心",
   "item.mob_friends.blaze_core": "烈焰人核心",
-  "item.mob_friends.active_blaze_core": "激活的烈焰人核心",
+  "item.mob_friends.active_blaze_core": "烈焰人核心",
   "item.mob_friends.broken_blaze_core": "破碎的烈焰人核心",
 
   "item.mob_friends.zombie_token": "僵尸的谢意",
@@ -22,6 +22,10 @@
   "item.mob_friends.enderman_token": "末影人的谢意",
   "item.mob_friends.slime_token": "史莱姆的谢意",
   "item.mob_friends.blaze_token": "烈焰人的谢意",
+
+  "item.mob_friends.soul_baozi": "灵魂包子",
+  "item.mob_friends.upgraded_soul_baozi": "§d澎湃灵魂包",
+  "item.mob_friends.upgraded_samsa": "§6喷香烤包子",
 
   "item.mob_friends.coin": "眸玉",
   "item.mob_friends.powder": "末影粉",
@@ -54,6 +58,11 @@
   "tooltip.mob_friends.active_zombie_core.stored": "§9已储存一位战士。右键地面释放。",
   "tooltip.mob_friends.broken_zombie_core": "§c其中的战士已倒下。",
   "tooltip.mob_friends.broken_zombie_core_repair": "§7副手手持不死图腾使用以复活。",
+
+  "tooltip.mob_friends.combat.level_title": "食阶",
+  "tooltip.mob_friends.combat.taste_title.0": "初尝其味",
+  "tooltip.mob_friends.combat.taste_title.1": "赏时品鲜",
+  "tooltip.mob_friends.combat.taste_title.2": "食之方家",
 
   "message.mob_friends.unfeedable_food": "§e这种食物似乎蕴含着强大的力量...",
   "message.mob_friends.ritual_pending": "§c它似乎遇到了瓶颈... (提示: 将 %s §c放置在地上)",

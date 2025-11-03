@@ -51,6 +51,8 @@ public class ModTags {
         public static final TagKey<Item> BLAZE_TIER_1_RITUAL_FOOD = tag("blaze_tier_1_ritual_food");
         public static final TagKey<Item> BLAZE_TIER_2_RITUAL_FOOD = tag("blaze_tier_2_ritual_food");
 
+        public static final TagKey<Item> THROWABLE_BAOZI = tag("throwable_baozi");
+
         private static TagKey<Item> tag(String name) {
             return TagKey.create(Registries.ITEM, ResourceLocation.fromNamespaceAndPath(MobFriends.MOD_ID, name));
         }

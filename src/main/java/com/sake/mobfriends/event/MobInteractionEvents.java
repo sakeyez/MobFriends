@@ -5,6 +5,8 @@ import com.sake.mobfriends.entity.*;
 import com.sake.mobfriends.init.ModDataComponents;
 import com.sake.mobfriends.init.ModItems;
 import com.sake.mobfriends.item.*;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -15,17 +17,75 @@ import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.monster.AbstractSkeleton;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.projectile.Snowball;
 import net.minecraft.world.item.ArmorItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
+import com.sake.mobfriends.util.ModTags;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 
 import java.util.UUID;
 
 @EventBusSubscriber(modid = MobFriends.MOD_ID)
 public class MobInteractionEvents {
+    @SubscribeEvent
+    public static void onPlayerRightClickItem(PlayerInteractEvent.RightClickItem event) {
+        Player player = event.getEntity();
+        Level level = event.getLevel();
+        ItemStack stack = event.getItemStack();
+
+        if (!player.isShiftKeyDown()) {
+            return;
+        }
+        if (!stack.is(ModTags.Items.THROWABLE_BAOZI)) {
+            return;
+        }
+
+        // 只在服务器端执行实际的投掷逻辑
+        if (!level.isClientSide()) {
+            level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.SNOWBALL_THROW, SoundSource.NEUTRAL, 0.5F, 0.4F / (level.getRandom().nextFloat() * 0.4F + 0.8F));
+
+            Snowball projectile = new Snowball(level, player);
+            projectile.setItem(stack.copy());
+
+            Vec3 lookVector = player.getLookAngle();
+            projectile.shoot(lookVector.x, lookVector.y, lookVector.z, 1.5F, 1.0F);
+
+            level.addFreshEntity(projectile);
+
+            if (!player.getAbilities().instabuild) {
+                stack.shrink(1);
+            }
+        }
+
+        // 返回成功，让游戏知道我们处理了这次点击
+        event.setCanceled(true);
+        event.setCancellationResult(InteractionResult.SUCCESS);
+    }
+
+    /**
+     * 事件二：【核心修复】阻止吃的动画
+     * 这是一个安全保障，确保"开始使用物品"（即吃）的动作被彻底取消。
+     */
+    @SubscribeEvent
+    public static void onStartUsingItem(LivingEntityUseItemEvent.Start event) {
+        if (!(event.getEntity() instanceof Player player)) {
+            return;
+        }
+
+        if (player.isShiftKeyDown()) {
+            ItemStack stack = event.getItem();
+            // 【修改】检查物品是否在我们的新标签里
+            if (stack.is(ModTags.Items.THROWABLE_BAOZI)) {
+                event.setCanceled(true);
+            }
+        }
+    }
 
     @SubscribeEvent
     public static void onPlayerRightClickMob(PlayerInteractEvent.EntityInteract event) {
