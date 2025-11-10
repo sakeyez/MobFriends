@@ -30,6 +30,13 @@
   "item.mob_friends.coin": "眸玉",
   "item.mob_friends.powder": "末影粉",
 
+  "item.mob_friends.zombie_npc_spawn_egg": "僵尸农夫刷怪蛋",
+  "item.mob_friends.skeleton_npc_spawn_egg": "骷髅渔民刷怪蛋",
+  "item.mob_friends.crepper_npc_spawn_egg": "苦力怕刷怪蛋",
+  "item.mob_friends.enderman_npc_spawn_egg": "末影人刷怪蛋",
+  "item.mob_friends.slime_npc_spawn_egg": "史莱姆刷怪蛋",
+  "item.mob_friends.blaze_npc_spawn_egg": "烈焰人刷怪蛋",
+
   "entity.mob_friends.zombie_npc_entity": "僵尸农夫",
   "entity.mob_friends.skeleton_npc_entity": "骷髅渔民",
   "entity.mob_friends.creeper_npc_entity": "苦力怕朋友",
@@ -74,9 +81,10 @@
   "entity.mob_friends.combat_creeper": "苦力怕战士",
   "entity.mob_friends.combat_blaze": "烈焰人战士",
 
-  "message.mob_friends.level_cap_stuck": "§c%s似乎遇到了瓶颈，需要特殊的食物才能继续成长！",
-  "message.mob_friends.level_cap_broken": "§a%s吞噬了强大的食物，突破了自身的极限！",
-  "message.mob_friends.ate_dining_food": "§e%s吃下了美味的大餐，获得了 %s 点幸福感！",
-  "message.mob_friends.ate_food": "§a%s获得了 %s 点幸福感。（%s/%s）",
-  "message.mob_friends.level_up": "§b%s升级了！现在是 %s 级！"
+
+  "message.mob_friends.level_cap_increased": "§6§l一次难忘的盛宴！§r§r",
+  "message.mob_friends.needs_feast": "§e或许一顿更加丰盛的美食会带来一些突破……",
+  "message.mob_friends.new_dining_food": "§d全新的美味！对美食的见闻增加了！",
+
+  "effect.mob_friends.soul_link":"灵魂链接"
 }

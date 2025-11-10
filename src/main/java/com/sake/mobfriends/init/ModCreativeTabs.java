@@ -22,13 +22,9 @@ public class ModCreativeTabs {
                     .displayItems((pParameters, pOutput) -> {
                         // 在这里添加所有你的物品
                         pOutput.accept(ModItems.ZOMBIE_CORE.get());
-                        pOutput.accept(ModItems.BROKEN_ZOMBIE_CORE.get());
                         pOutput.accept(ModItems.WITHER_CORE.get());
-                        pOutput.accept(ModItems.BROKEN_WITHER_CORE.get());
                         pOutput.accept(ModItems.CREEPER_CORE.get());
-                        pOutput.accept(ModItems.BROKEN_CREEPER_CORE.get());
                         pOutput.accept(ModItems.BLAZE_CORE.get());
-                        pOutput.accept(ModItems.BROKEN_BLAZE_CORE.get());
 
                         pOutput.accept(ModItems.ZOMBIE_TOKEN.get());
                         pOutput.accept(ModItems.SKELETON_TOKEN.get());

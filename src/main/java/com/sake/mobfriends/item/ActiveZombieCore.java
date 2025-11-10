@@ -80,9 +80,7 @@ public class ActiveZombieCore extends AbstractCoreItem {
 
     @Override
     public Component getName(ItemStack pStack) {
-        // .plainCopy() 获取 lang 文件中的原始文本
-        // .withStyle(ChatFormatting.GOLD) 将其设为橙色 (GOLD 在 MC 中是橙色)
-        return super.getName(pStack).plainCopy().withStyle(ChatFormatting.GOLD);
+        return super.getName(pStack).plainCopy().withStyle(ChatFormatting.LIGHT_PURPLE);
     }
 
     @Override

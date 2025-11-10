@@ -40,6 +40,7 @@ public class ModEntities {
 
     public static final Supplier<EntityType<CombatBlaze>> COMBAT_BLAZE = ENTITY_TYPES.register("combat_blaze",
             () -> EntityType.Builder.of(CombatBlaze::new, MobCategory.CREATURE)
+                    .fireImmune()
                     .sized(0.6F, 1.8F)
                     .build("combat_blaze"));
 
@@ -62,10 +63,11 @@ public class ModEntities {
                     .build("enderman_npc"));
     public static final Supplier<EntityType<SlimeNpcEntity>> SLIME_NPC = ENTITY_TYPES.register("slime_npc",
             () -> EntityType.Builder.of(SlimeNpcEntity::new, MobCategory.CREATURE)
-                    .sized(2.04F, 2.04F) // 尺寸参考大史莱姆
+                    .sized(0.51F, 0.51F)
                     .build("slime_npc"));
     public static final Supplier<EntityType<BlazeNpcEntity>> BLAZE_NPC = ENTITY_TYPES.register("blaze_npc",
             () -> EntityType.Builder.of(BlazeNpcEntity::new, MobCategory.CREATURE)
+                    .fireImmune()
                     .sized(0.6F, 1.8F)
                     .build("blaze_npc"));
 

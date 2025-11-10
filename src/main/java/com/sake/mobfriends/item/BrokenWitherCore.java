@@ -35,6 +35,9 @@ public class BrokenWitherCore extends Item {
             if (witherData != null) {
                 // 【核心修复】在转移数据前，手动将生命值重置为一个正数！
                 witherData.putFloat("Health", 20.0F); // 或者任何你希望的初始生命值
+                witherData.remove("ActiveEffects");
+                witherData.remove("HurtTime");
+                witherData.remove("DeathTime");
                 activeCore.set(ModDataComponents.STORED_WITHER_NBT.get(), witherData.copy());
             }
 
@@ -59,9 +62,8 @@ public class BrokenWitherCore extends Item {
 
     @Override
     public Component getName(ItemStack pStack) {
-        // .plainCopy() 获取 lang 文件中的原始文本
-        // .withStyle(ChatFormatting.DARK_GRAY) 将其设为暗灰色
-        return super.getName(pStack).plainCopy().withStyle(ChatFormatting.DARK_GRAY);
+
+        return super.getName(pStack).plainCopy().withStyle(ChatFormatting.GRAY);
     }
 
     @Override

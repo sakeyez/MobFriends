@@ -46,7 +46,9 @@ public class BrokenZombieCore extends AbstractCoreItem {
                 // 在转移数据前，手动将生命值重置为一个正数！
                 // 20.0F 是僵尸战士的初始基础生命值。
                 zombieData.putFloat("Health", 20.0F);
-
+                zombieData.remove("ActiveEffects");
+                zombieData.remove("HurtTime");
+                zombieData.remove("DeathTime");
                 // 将修复好的数据复制到新的激活核心里
                 activeCore.set(ModDataComponents.STORED_ZOMBIE_NBT.get(), zombieData.copy());
             }
@@ -78,9 +80,8 @@ public class BrokenZombieCore extends AbstractCoreItem {
 
     @Override
     public Component getName(ItemStack pStack) {
-        // .plainCopy() 获取 lang 文件中的原始文本
-        // .withStyle(ChatFormatting.DARK_GRAY) 将其设为暗灰色
-        return super.getName(pStack).plainCopy().withStyle(ChatFormatting.DARK_GRAY);
+         
+        return super.getName(pStack).plainCopy().withStyle(ChatFormatting.GRAY);
     }
 
     @Override

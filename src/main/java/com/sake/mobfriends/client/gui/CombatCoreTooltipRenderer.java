@@ -42,7 +42,7 @@ public class CombatCoreTooltipRenderer implements ClientTooltipComponent {
     private static final int LINE_PADDING = 2; // 文本行间距
     private static final int TOTAL_LINE_SPACING = LINE_HEIGHT + LINE_PADDING; // 11
 
-    private static final int TEXT_COLOR = 0xDDDDDD; // 亮银色
+    private static final int TEXT_COLOR = 0x55FFFF; // 天蓝色 (Aqua)
 
 
     public CombatCoreTooltipRenderer(CombatCoreTooltip tooltip) {

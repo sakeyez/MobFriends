@@ -1,5 +1,19 @@
 package com.sake.mobfriends.entity;
 
+// 【新增】导入
+import com.sake.mobfriends.entity.ai.CreeperEngineerGoal;
+import com.sake.mobfriends.entity.ai.DepositItemsGoal;
+import com.sake.mobfriends.inventory.ZombieChestMenu;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.ai.goal.FloatGoal;
+import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
+import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
+import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+
 import com.sake.mobfriends.trading.TradeManager;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -25,12 +39,16 @@ import org.jetbrains.annotations.NotNull;
 import javax.annotation.Nullable;
 import java.util.OptionalInt;
 
-public class CreeperNpcEntity extends Creeper implements Merchant {
+// 【修改】实现 MenuProvider 来提供背包GUI
+public class CreeperNpcEntity extends Creeper implements Merchant, MenuProvider {
 
     @Nullable
     private MerchantOffers offers;
     @Nullable
     private Player tradingPlayer;
+
+    // 【新增】背包，和僵尸农夫一样
+    private final SimpleContainer inventory = new SimpleContainer(27);
 
     public CreeperNpcEntity(EntityType<? extends Creeper> type, Level level) {
         super(type, level);
@@ -42,13 +60,59 @@ public class CreeperNpcEntity extends Creeper implements Merchant {
                 .add(Attributes.MOVEMENT_SPEED, 0.25D);
     }
 
+    // 【修改】重写 registerGoals
     @Override
     protected void registerGoals() {
-        // AI 逻辑将在第三阶段添加
+        this.goalSelector.addGoal(0, new FloatGoal(this));
+
+        // --- 新增AI ---
+        this.goalSelector.addGoal(1, new CreeperEngineerGoal(this, 0.8D));
+        // 苦力怕工程师没有产出物品，所以不需要 DepositItemsGoal
+        // 如果你未来的设计（比如精密构件）产出了物品，再取消下面这行的注释
+        // this.goalSelector.addGoal(2, new DepositItemsGoal(this, 0.8D));
+
+        this.goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 0.8D));
+        this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 8.0F));
+        this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
+    }
+
+    // 【新增】背包相关方法 (复制自 ZombieNpcEntity)
+    public SimpleContainer getInventory() {
+        return this.inventory;
     }
 
     @Override
+    public void addAdditionalSaveData(CompoundTag c) {
+        super.addAdditionalSaveData(c);
+        c.put("Inventory", this.inventory.createTag(this.level().registryAccess()));
+        // 【【【修改点：移除】】】
+        // if (this.offers != null) {
+        //     c.put("Offers", this.offers.save(this.level().registryAccess()));
+        // }
+    }
+
+    @Override
+    public void readAdditionalSaveData(CompoundTag c) {
+        super.readAdditionalSaveData(c);
+        this.inventory.fromTag(c.getList("Inventory", 10), this.level().registryAccess());
+        // 【【【修改点：移除】】】
+        // if (c.contains("Offers", 10)) {
+        //     this.offers = MerchantOffers.load(this.level().registryAccess(), c.getCompound("Offers")).orElse(null);
+        // }
+    }
+
+    // --- 【修改】交互逻辑 ---
+    @Override
     public @NotNull InteractionResult mobInteract(Player pPlayer, @NotNull InteractionHand pHand) {
+        // 【新增】潜行右键打开背包GUI
+        if (pPlayer.isShiftKeyDown()) {
+            if (!this.level().isClientSide) {
+                pPlayer.openMenu(this);
+            }
+            return InteractionResult.sidedSuccess(this.level().isClientSide());
+        }
+
+        // 交易逻辑
         if (this.isAlive() && this.getTradingPlayer() == null) {
             if (pHand == InteractionHand.MAIN_HAND) {
                 if (!this.level().isClientSide()) {
@@ -60,6 +124,20 @@ public class CreeperNpcEntity extends Creeper implements Merchant {
         return super.mobInteract(pPlayer, pHand);
     }
 
+    // 【新增】MenuProvider 实现
+    @Override
+    public @NotNull Component getDisplayName() {
+        return this.getName();
+    }
+
+    @Nullable
+    @Override
+    public AbstractContainerMenu createMenu(int c, @NotNull Inventory i, @NotNull Player p) {
+        // 复用僵尸的背包菜单
+        return new ZombieChestMenu(c, i, this.inventory);
+    }
+
+    // --- 交易逻辑 (保持不变) ---
     public void startTrading(Player pPlayer) {
         this.setTradingPlayer(pPlayer);
         this.openTradingScreen(pPlayer, this.getDisplayName());

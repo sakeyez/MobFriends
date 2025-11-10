@@ -6,12 +6,10 @@ import com.sake.mobfriends.client.gui.CombatCoreTooltip;
 import com.sake.mobfriends.client.gui.CombatCoreTooltipRenderer;
 import com.sake.mobfriends.client.model.CombatBlazeModel;
 import com.sake.mobfriends.client.model.CombatCreeperModel;
+import com.sake.mobfriends.client.renderer.*;
 import net.minecraft.resources.ResourceLocation;
 import com.sake.mobfriends.client.model.CombatZombieModel;
-import com.sake.mobfriends.client.renderer.CombatBlazeRenderer;
-import com.sake.mobfriends.client.renderer.CombatCreeperRenderer;
-import com.sake.mobfriends.client.renderer.CombatWitherRenderer;
-import com.sake.mobfriends.client.renderer.CombatZombieRenderer;
+import com.sake.mobfriends.client.model.CreeperNpcModel;
 import com.sake.mobfriends.init.ModEntities;
 import com.sake.mobfriends.init.ModMenuTypes;
 import net.minecraft.client.model.HumanoidModel;
@@ -48,9 +46,9 @@ public class ClientSetup {
         event.registerEntityRenderer(ModEntities.COMBAT_WITHER.get(), CombatWitherRenderer::new);
         event.registerEntityRenderer(ModEntities.COMBAT_CREEPER.get(), CombatCreeperRenderer::new);
         event.registerEntityRenderer(ModEntities.COMBAT_BLAZE.get(), CombatBlazeRenderer::new);
-        event.registerEntityRenderer(ModEntities.ZOMBIE_NPC.get(), ZombieRenderer::new);
-        event.registerEntityRenderer(ModEntities.SKELETON_NPC.get(), SkeletonRenderer::new);
-        event.registerEntityRenderer(ModEntities.CREEPER_NPC.get(), CreeperRenderer::new);
+        event.registerEntityRenderer(ModEntities.ZOMBIE_NPC.get(), ZombieNpcRenderer::new); // <-- 修改
+        event.registerEntityRenderer(ModEntities.SKELETON_NPC.get(), SkeletonNpcRenderer::new); // <-- 修改
+        event.registerEntityRenderer(ModEntities.CREEPER_NPC.get(), CreeperNpcRenderer::new);
         event.registerEntityRenderer(ModEntities.ENDERMAN_NPC.get(), EndermanRenderer::new);
         event.registerEntityRenderer(ModEntities.SLIME_NPC.get(), SlimeRenderer::new);
         event.registerEntityRenderer(ModEntities.BLAZE_NPC.get(), BlazeRenderer::new);
@@ -68,6 +66,8 @@ public class ClientSetup {
         event.registerLayerDefinition(COMBAT_WITHER_OUTER_ARMOR_LAYER, () -> LayerDefinition.create(HumanoidModel.createMesh(new CubeDeformation(1.0F), 0.0f), 64, 32));
         event.registerLayerDefinition(CombatCreeperModel.LAYER_LOCATION, CombatCreeperModel::createBodyLayer);
         event.registerLayerDefinition(CombatBlazeModel.LAYER_LOCATION, CombatBlazeModel::createBodyLayer);
+
+        event.registerLayerDefinition(CreeperNpcModel.LAYER_LOCATION, CreeperNpcModel::createBodyLayer);
     }
 
 

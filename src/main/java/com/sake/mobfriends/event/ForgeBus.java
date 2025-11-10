@@ -7,6 +7,7 @@ import com.sake.mobfriends.init.ModDataComponents;
 import com.sake.mobfriends.init.ModEffects;
 import com.sake.mobfriends.init.ModItems;
 import com.sake.mobfriends.util.ModTags;
+import com.sake.mobfriends.world.SlimeInventoryManager;
 import net.minecraft.core.Holder;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -16,6 +17,7 @@ import net.minecraft.resources.ResourceKey;
 import com.sake.mobfriends.init.ModDataComponents;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -32,10 +34,11 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.SmallFireball;
-import net.minecraft.world.entity.projectile.Snowball;
 import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.event.entity.EntityLeaveLevelEvent;
+import net.neoforged.neoforge.event.entity.item.ItemExpireEvent;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.damagesource.DamageSource;
@@ -167,6 +170,7 @@ public class ForgeBus {
 
                     // --- 如果命中了任意一种包子 ---
                     if (didApplyEffect) {
+                        warrior.playSound(SoundEvents.GENERIC_EAT, 1.0F, 1.0F); // 播放吃东西的音效
                         event.setCanceled(true); // 取消事件（阻止伤害和击退）
                         projectile.discard();   // 移除投掷物
                     }
@@ -186,16 +190,15 @@ public class ForgeBus {
         LivingEntity damagedEntity = event.getEntity();
         float damageAmount = event.getOriginalDamage();
 
+        // --- 凋零吸血逻辑 (不变) ---
         Optional<ResourceKey<DamageType>> optKey = damagedEntity.level().registryAccess().registryOrThrow(Registries.DAMAGE_TYPE).getResourceKey(source.type());
-
         if (optKey.isPresent()) {
             ResourceKey<DamageType> key = optKey.get();
             boolean isWitherOrPoison = key.equals(DamageTypes.WITHER) || key.location().getPath().contains("poison");
 
             if (isWitherOrPoison) {
                 final float HEAL_AMOUNT = 1.0F;
-
-                AABB searchArea = new AABB(damagedEntity.blockPosition()).inflate(32.0D);
+                AABB searchArea = new AABB(damagedEntity.blockPosition()).inflate(16.0D); // 16格
                 List<CombatWither> nearbyWithers = damagedEntity.level().getEntitiesOfClass(CombatWither.class, searchArea);
 
                 for (CombatWither witherSource : nearbyWithers) {
@@ -206,20 +209,28 @@ public class ForgeBus {
             }
         }
 
+        // --- 灵魂链接逻辑 ---
         if (damagedEntity instanceof Player player) {
             if (source.getEntity() != player) {
+
+                // --- 【核心修复】 ---
+                // 如果伤害源是“不可阻挡”的（例如 /kill, /effect ... instant_damage, 或虚空）
+                // 我们必须立即返回，让玩家正常受到伤害，否则会造成无限循环！
+                if (source.is(DamageTypes.GENERIC_KILL) || source.is(DamageTypes.FELL_OUT_OF_WORLD)) {
+                    return; // 不阻挡 /kill 或 虚空 伤害
+                }
+                // --- 修复结束 ---
+
                 List<AbstractWarriorEntity> linkedWarriors = player.level().getEntitiesOfClass(
                         AbstractWarriorEntity.class,
                         player.getBoundingBox().inflate(64.0D),
-
-                        // 【最终修复】同样，将 SOUL_LINK 变量本身转换为 Holder
                         warrior -> warrior.isOwnedBy(player) && warrior.hasEffect((Holder<MobEffect>) ModEffects.SOUL_LINK) && warrior.isAlive()
                 );
 
                 if (!linkedWarriors.isEmpty()) {
                     AbstractWarriorEntity bodyguard = linkedWarriors.get(0);
 
-                    // 【修复】使用 .genericKill() 这一必定存在的伤害源来绕过防御
+                    // 转移伤害
                     bodyguard.hurt(bodyguard.level().damageSources().genericKill(), damageAmount);
 
                     if(bodyguard.level() instanceof ServerLevel serverLevel) {
@@ -231,19 +242,20 @@ public class ForgeBus {
                                 (int)(damageAmount * 2), 0.3, 0.3, 0.3, 0.2);
                     }
 
-                    // 【修复】错误 3: 使用 setNewDamage(0) 替换 setAmount(0)
+                    // 取消对玩家的伤害
                     event.setNewDamage(0);
                     return;
                 }
             }
         }
 
+        // --- 烈焰人伤害逻辑 (不变) ---
         if (source.getDirectEntity() instanceof SmallFireball &&
                 source.getEntity() instanceof CombatBlaze blaze) {
-            // 【修复】注意：这里应该用 setNewDamage
             event.setNewDamage(blaze.getFireballDamage());
         }
     }
+
     @SubscribeEvent
     public static void onEntityJoinLevel(EntityJoinLevelEvent event) {
         if (event.getLevel().isClientSide() || !(event.getEntity() instanceof PathfinderMob mob)) {
@@ -265,11 +277,82 @@ public class ForgeBus {
     }
 
     @SubscribeEvent
+    public static void onItemExpire(ItemExpireEvent event) {
+        // 1. 编译器报错 证明 .getItemEntity() 不存在。
+        // 2. 源码 证明 .getEntity() 存在。
+        Entity entity = event.getEntity();
+
+        // 3. 检查并转换
+        if (!(entity instanceof ItemEntity itemEntity)) {
+            return;
+        }
+
+        // 4. (原逻辑)
+        if (itemEntity.level().isClientSide()) {
+            return;
+        }
+
+        ItemStack stack = itemEntity.getItem();
+        if (stack.isEmpty()) {
+            return;
+        }
+
+        ServerLevel level = (ServerLevel) itemEntity.level();
+        SimpleContainer sharedInventory = SlimeInventoryManager.get(level).getInventory();
+
+        ItemStack remaining = sharedInventory.addItem(stack);
+
+        itemEntity.setItem(remaining);
+
+        if (!remaining.isEmpty()) {
+            event.setExtraLife(6000);
+        }
+    }
+
+    // 【【【新增：监听物品掉入虚空（或被 /kill）】】】
+    @SubscribeEvent
+    public static void onEntityLeaveLevel(EntityLeaveLevelEvent event) {
+        if (event.getEntity() instanceof ItemEntity itemEntity &&
+                !itemEntity.level().isClientSide()) {
+
+            // 检查原因1：掉入虚空
+            boolean isFallingIntoVoid = itemEntity.getY() < itemEntity.level().getMinBuildHeight() - 20;
+
+            // 【【【新增】】】
+            // 检查原因2：被 /kill 命令杀死
+            boolean isKilled = itemEntity.getRemovalReason() == Entity.RemovalReason.KILLED;
+
+            // 【【【修改】】】
+            // 只要满足 *任意一个* 条件，就执行保存
+            if (isFallingIntoVoid || isKilled) {
+
+                // (修复 "弃用" 提示)
+                if (itemEntity.getAge() >= 5999) {
+                    return; // ItemExpireEvent 会处理
+                }
+
+                ItemStack stack = itemEntity.getItem();
+                if (stack.isEmpty()) {
+                    return;
+                }
+
+                ServerLevel level = (ServerLevel) itemEntity.level();
+                SimpleContainer sharedInventory = SlimeInventoryManager.get(level).getInventory();
+
+                ItemStack remaining = sharedInventory.addItem(stack);
+
+                itemEntity.setItem(remaining);
+            }
+        }
+    }
+
+    @SubscribeEvent
     public static void onLivingDeath(LivingDeathEvent event) {
         if (event.getEntity().level().isClientSide()) {
             return;
         }
         LivingEntity deadEntity = event.getEntity();
+
         if (deadEntity instanceof CombatZombie deadZombie) {
             UUID deadUUID = deadZombie.getUUID();
             for (Player player : deadZombie.level().players()) {
@@ -281,7 +364,11 @@ public class ForgeBus {
                         if (deadUUID.equals(coreUUID)) {
                             ItemStack brokenCore = new ItemStack(ModItems.BROKEN_ZOMBIE_CORE.get());
                             CompoundTag data = new CompoundTag();
+
+                            // 【你的方案】在保存前清除效果
+                            deadZombie.removeAllEffects();
                             deadZombie.save(data);
+
                             brokenCore.set(ModDataComponents.STORED_ZOMBIE_NBT.get(), data);
                             brokenCore.set(ModDataComponents.ZOMBIE_UUID.get(), deadUUID);
                             inventory.setItem(i, brokenCore);
@@ -302,7 +389,11 @@ public class ForgeBus {
                         if (deadUUID.equals(coreUUID)) {
                             ItemStack brokenCore = new ItemStack(ModItems.BROKEN_WITHER_CORE.get());
                             CompoundTag data = new CompoundTag();
+
+                            // 【你的方案】在保存前清除效果
+                            deadWither.removeAllEffects();
                             deadWither.save(data);
+
                             brokenCore.set(ModDataComponents.STORED_WITHER_NBT.get(), data);
                             brokenCore.set(ModDataComponents.WITHER_UUID.get(), deadUUID);
                             inventory.setItem(i, brokenCore);
@@ -323,7 +414,11 @@ public class ForgeBus {
                         if (deadUUID.equals(coreUUID)) {
                             ItemStack brokenCore = new ItemStack(ModItems.BROKEN_CREEPER_CORE.get());
                             CompoundTag data = new CompoundTag();
+
+                            // 【你的方案】在保存前清除效果
+                            deadCreeper.removeAllEffects();
                             deadCreeper.save(data);
+
                             brokenCore.set(ModDataComponents.STORED_CREEPER_NBT.get(), data);
                             brokenCore.set(ModDataComponents.CREEPER_UUID.get(), deadUUID);
                             inventory.setItem(i, brokenCore);
@@ -344,7 +439,11 @@ public class ForgeBus {
                         if (deadUUID.equals(coreUUID)) {
                             ItemStack brokenCore = new ItemStack(ModItems.BROKEN_BLAZE_CORE.get());
                             CompoundTag data = new CompoundTag();
+
+                            // 【你的方案】在保存前清除效果
+                            deadBlaze.removeAllEffects();
                             deadBlaze.save(data);
+
                             brokenCore.set(ModDataComponents.STORED_BLAZE_NBT.get(), data);
                             brokenCore.set(ModDataComponents.BLAZE_UUID.get(), deadUUID);
                             inventory.setItem(i, brokenCore);

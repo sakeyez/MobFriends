@@ -14,6 +14,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.monster.AbstractSkeleton;
 import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.entity.player.Player;
@@ -170,6 +171,9 @@ public class MobInteractionEvents {
     }
     private static void handleRecall(Player player, ItemStack stack, LivingEntity warrior, Runnable storeAction, PlayerInteractEvent.EntityInteract event) {
         if (!event.getLevel().isClientSide()) {
+            if (warrior instanceof Mob mob) {
+                mob.setTarget(null);
+            }
             storeAction.run(); // 执行具体的存储操作
             warrior.discard(); // 从世界中移除战士
             player.level().playSound(null, player.blockPosition(), SoundEvents.PLAYER_SPLASH_HIGH_SPEED, SoundSource.PLAYERS, 0.5f, 1.2f);

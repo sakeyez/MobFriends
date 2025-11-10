@@ -37,6 +37,9 @@ public class BrokenCreeperCore extends Item {
             if (creeperData != null) {
                 // 【核心修复】在转移数据前，手动将生命值重置为一个正数！
                 creeperData.putFloat("Health", 20.0F);
+                creeperData.remove("ActiveEffects");
+                creeperData.remove("HurtTime");
+                creeperData.remove("DeathTime");
                 activeCore.set(ModDataComponents.STORED_CREEPER_NBT.get(), creeperData.copy());
             }
 
@@ -61,9 +64,8 @@ public class BrokenCreeperCore extends Item {
 
     @Override
     public Component getName(ItemStack pStack) {
-        // .plainCopy() 获取 lang 文件中的原始文本
-        // .withStyle(ChatFormatting.DARK_GRAY) 将其设为暗灰色
-        return super.getName(pStack).plainCopy().withStyle(ChatFormatting.DARK_GRAY);
+         
+        return super.getName(pStack).plainCopy().withStyle(ChatFormatting.GRAY);
     }
 
     @Override

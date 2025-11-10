@@ -14,11 +14,18 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 
 public class ZombieCore extends AbstractCoreItem {
 
     public ZombieCore(Properties properties) {
         super(properties);
+    }
+
+    @Override
+    public Component getName(ItemStack pStack) {
+        return super.getName(pStack).plainCopy().withStyle(ChatFormatting.LIGHT_PURPLE);
     }
 
     @Override
@@ -41,10 +48,9 @@ public class ZombieCore extends AbstractCoreItem {
             return InteractionResult.FAIL;
         }
 
-        // --- 【核心修正：驯服僵尸】 ---
-        zombie.tame(player); // 将召唤者设置为主人
-
+        zombie.tame(player);
         zombie.moveTo(context.getClickedPos().above(), context.getRotation(), 0);
+
         if (level instanceof ServerLevel serverLevel) {
             zombie.finalizeSpawn(serverLevel, level.getCurrentDifficultyAt(context.getClickedPos()), MobSpawnType.SPAWN_EGG, null);
             level.addFreshEntity(zombie);
@@ -53,10 +59,15 @@ public class ZombieCore extends AbstractCoreItem {
             setZombieUUID(activeCore, zombie.getUUID());
             player.setItemInHand(context.getHand(), activeCore);
 
-            // 音效
-            level.playSound(null, context.getClickedPos(), SoundEvents.ZOMBIE_VILLAGER_CONVERTED, SoundSource.BLOCKS, 1.0F, 1.0F);
-            // 粒子
-            serverLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER, zombie.getX(), zombie.getY() + 1.5, zombie.getZ(), 20, 0.5, 0.5, 0.5, 0.1);
+            // 【修改】统一的召唤音效和粒子
+            // 音效 (传送门)
+            level.playSound(null, context.getClickedPos(), SoundEvents. ENDERMAN_TELEPORT, SoundSource.PLAYERS, 0.8F, 1.2F);
+            // 粒子 (附魔)
+            serverLevel.sendParticles(ParticleTypes.ENCHANT,
+                    zombie.getX(), zombie.getY() + zombie.getBbHeight() / 2.0, zombie.getZ(),
+                    100, // 大量
+                    zombie.getBbWidth() / 2.0, zombie.getBbHeight() / 2.0, zombie.getBbWidth() / 2.0,
+                    0.1); // 粒子速度
 
             return InteractionResult.SUCCESS;
         }
