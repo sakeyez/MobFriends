@@ -4,6 +4,8 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.Container; // 【【【新增导入】】】
+import net.minecraft.world.ContainerListener; // 【【【新增导入】】】
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.storage.DimensionDataStorage;
@@ -11,8 +13,11 @@ import org.jetbrains.annotations.NotNull;
 
 /**
  * 这是一个 SavedData 类，用于在世界级别存储唯一的、共享的史莱姆NPC背包。
+ *
+ * 【【【核心修复 1】】】
+ * 实现 ContainerListener 接口，以便我们可以“监听”背包的变化。
  */
-public class SlimeInventoryManager extends SavedData {
+public class SlimeInventoryManager extends SavedData implements ContainerListener { // 【【【修改】】】
 
     private static final String DATA_NAME = "slime_npc_inventory";
     private final SimpleContainer sharedInventory = new SimpleContainer(27);
@@ -23,13 +28,19 @@ public class SlimeInventoryManager extends SavedData {
     private SlimeInventoryManager(CompoundTag tag, HolderLookup.Provider registries) {
         // 从NBT加载背包内容
         this.sharedInventory.fromTag(tag.getList("Inventory", 10), registries);
+
+        // 【【【修改点 2】】】
+        // 在加载后，立即开始监听背包
+        this.sharedInventory.addListener(this);
     }
 
     /**
      * 这是创建新数据时调用的构造函数
      */
     private SlimeInventoryManager() {
-        // 只是一个空背包，什么也不用做
+        // 【【【修改点 3】】】
+        // 在创建后，立即开始监听背包
+        this.sharedInventory.addListener(this);
     }
 
     /**
@@ -38,7 +49,7 @@ public class SlimeInventoryManager extends SavedData {
     private static final SavedData.Factory<SlimeInventoryManager> FACTORY = new SavedData.Factory<>(
             SlimeInventoryManager::new,         // 用于创建新实例 () -> new SlimeInventoryManager()
             SlimeInventoryManager::load,        // 用于从NBT加载 (CompoundTag, RegistryAccess) -> load()
-            null // (数据修复器，我们不需要)
+            null
     );
 
     /**
@@ -62,10 +73,7 @@ public class SlimeInventoryManager extends SavedData {
      * 【关键】这是我们从任何地方获取共享背包的入口
      */
     public static SlimeInventoryManager get(ServerLevel level) {
-        // 获取主世界(Overworld)的数据存储
         DimensionDataStorage storage = level.getServer().overworld().getDataStorage();
-
-        // 尝试获取，如果不存在就使用 FACTORY 创建一个新的
         return storage.computeIfAbsent(FACTORY, DATA_NAME);
     }
 
@@ -74,5 +82,18 @@ public class SlimeInventoryManager extends SavedData {
      */
     public SimpleContainer getInventory() {
         return this.sharedInventory;
+    }
+
+    /**
+     * 【【【核心修复 4】】】
+     * 这是 ContainerListener 接口要求我们实现的方法。
+     * 当 sharedInventory.setChanged() 被调用时，这个方法就会被触发。
+     */
+    @Override
+    public void containerChanged(@NotNull Container pContainer) {
+        // 当背包内容发生变化时，
+        // 我们在这里将 SavedData 标记为“脏”(dirty)，
+        // 这样游戏在退出时就知道必须把它保存到磁盘上！
+        this.setDirty();
     }
 }

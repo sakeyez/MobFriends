@@ -48,13 +48,18 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+/**
+ * 【【【V3 最终AI修复版】】】
+ * 1. 修复：交换 FollowOwnerGoal 和 BlazeIdleGoal 的优先级 (解决问题1)
+ * 2. 修复：扩大 FOLLOW_RANGE 索敌范围 (解决问题3)
+ */
 public class CombatBlaze extends AbstractWarriorEntity implements RangedAttackMob {
 
+    // (所有 TIER_1_BLOCKS 和 数据追踪器 保持不变)
     private static final Set<Block> TIER_1_BLOCKS = Stream.of(
             ResourceLocation.fromNamespaceAndPath("kaleidoscope_cookery", "chorus_fried_egg"),
             ResourceLocation.fromNamespaceAndPath("kaleidoscope_cookery", "blaze_lamb_chop")
     ).map(BuiltInRegistries.BLOCK::get).filter(block -> block != Blocks.AIR).collect(Collectors.toSet());
-
     private static final EntityDataAccessor<Float> DATA_FIREBALL_DAMAGE = SynchedEntityData.defineId(CombatBlaze.class, EntityDataSerializers.FLOAT);
     private static final EntityDataAccessor<Integer> DATA_ATTACK_INTERVAL = SynchedEntityData.defineId(CombatBlaze.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> DATA_HAS_ATTACK_SPEED_SKILL = SynchedEntityData.defineId(CombatBlaze.class, EntityDataSerializers.BOOLEAN);
@@ -63,10 +68,10 @@ public class CombatBlaze extends AbstractWarriorEntity implements RangedAttackMo
 
     public CombatBlaze(EntityType<? extends TamableAnimal> type, Level level) {
         super(type, level);
-        // 【恢复】飞行生物需要一个特殊的移动控制器
-        this.moveControl = new BlazeMoveControl(this);
+        this.moveControl = new SmoothBlazeMoveControl(this); // (使用 V2 的平滑控制器)
     }
 
+    // (defineSynchedData, addAdditionalSaveData, readAdditionalSaveData, tick, ... 保持不变 ...)
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
@@ -76,7 +81,6 @@ public class CombatBlaze extends AbstractWarriorEntity implements RangedAttackMo
         builder.define(DATA_HAS_DRAGON_BREATH_SKILL, false);
         builder.define(DATA_HAS_MAGIC_IMMUNITY_SKILL, false);
     }
-
     @Override
     public void addAdditionalSaveData(CompoundTag compound) {
         super.addAdditionalSaveData(compound);
@@ -86,7 +90,6 @@ public class CombatBlaze extends AbstractWarriorEntity implements RangedAttackMo
         compound.putBoolean("HasDragonBreathSkill", this.hasDragonBreathSkill());
         compound.putBoolean("HasMagicImmunitySkill", this.hasMagicImmunitySkill());
     }
-
     @Override
     public void readAdditionalSaveData(CompoundTag compound) {
         super.readAdditionalSaveData(compound);
@@ -100,28 +103,18 @@ public class CombatBlaze extends AbstractWarriorEntity implements RangedAttackMo
         this.entityData.set(DATA_HAS_DRAGON_BREATH_SKILL, compound.getBoolean("HasDragonBreathSkill"));
         this.entityData.set(DATA_HAS_MAGIC_IMMUNITY_SKILL, compound.getBoolean("HasMagicImmunitySkill"));
     }
-
     @Override
     public void tick() {
-        // 1. 运行父类的 tick (例如 AbstractWarriorEntity的食物治疗)
         super.tick();
-
-        // 2. 仅在客户端执行粒子生成
         if (this.level().isClientSide()) {
-
-            // 3. 生成 2 个烟雾粒子 (原版烈焰人效果)
             for (int i = 0; i < 1; ++i) {
                 this.level().addParticle(ParticleTypes.LARGE_SMOKE,
-                        this.getRandomX(0.5D), // 在实体宽度 + 0.5 范围内随机X
-                        this.getRandomY(),        // 在实体高度范围内随机Y
-                        this.getRandomZ(0.5D), // 在实体深度 + 0.5 范围内随机Z
-                        0.0D, 0.0D, 0.0D);      // 粒子无初始速度
+                        this.getRandomX(0.5D),
+                        this.getRandomY(),
+                        this.getRandomZ(0.5D),
+                        0.0D, 0.0D, 0.0D);
             }
-
-            // 4. 如果有龙息技能，额外生成粒子
             if (this.hasDragonBreathSkill()) {
-                // 烟雾粒子是2个/tick, 1/4的比例就是 0.5个/tick
-                // 我们通过 50% 的几率每 tick 生成 1 个粒子来实现
                 if (this.random.nextFloat() < 0.5F) {
                     this.level().addParticle(ParticleTypes.PORTAL,
                             this.getRandomX(0.5D),
@@ -132,19 +125,16 @@ public class CombatBlaze extends AbstractWarriorEntity implements RangedAttackMo
             }
         }
     }
-
     @Override
     public void applyLevelBasedStats() {
         super.applyLevelBasedStats();
         if (this.level().isClientSide()) return;
         int level = this.getWarriorLevel();
-
         this.setFireballDamage(6.0f + 0.3f * level);
         int baseInterval = 40 - level;
         int finalInterval = this.hasAttackSpeedSkill() ? baseInterval - 20 : baseInterval;
         this.setAttackInterval(Math.max(1, finalInterval));
     }
-
     @Override
     protected void onRitualFoodEaten(ResourceLocation foodId) {
         String path = foodId.getPath();
@@ -154,63 +144,41 @@ public class CombatBlaze extends AbstractWarriorEntity implements RangedAttackMo
             this.entityData.set(DATA_HAS_DRAGON_BREATH_SKILL, true);
             this.entityData.set(DATA_HAS_MAGIC_IMMUNITY_SKILL, true);
         }
-        // 【修改】吃完食物后，立即调用 setWarriorLevel 来刷新所有属性
         this.setWarriorLevel(this.getWarriorLevel());
     }
-
     public boolean hasAttackSpeedSkill() {
         return this.entityData.get(DATA_HAS_ATTACK_SPEED_SKILL);
     }
-
     public boolean hasDragonBreathSkill() {
         return this.entityData.get(DATA_HAS_DRAGON_BREATH_SKILL);
     }
-
     public boolean hasMagicImmunitySkill() {
         return this.entityData.get(DATA_HAS_MAGIC_IMMUNITY_SKILL);
     }
-
-
     @Override
     public boolean hurt(@NotNull DamageSource pSource, float pAmount) {
-        // 1. 基础：免疫火焰伤害 (烈焰人天生特性)
-        // 【【【修复点 1：使用 DamageTypeTags.IS_FIRE 标签】】】
         if (pSource.is(DamageTypeTags.IS_FIRE)) {
             return false;
         }
-
-        // 2. 技能：如果解锁了技能
         if (this.hasMagicImmunitySkill()) {
-            // 【【【修复点 2：确认 MAGIC 和 INDIRECT_MAGIC 正确】】】
-            // (这些在 DamageTypes.java 中存在，是正确的)
             if (pSource.is(DamageTypes.MAGIC) || pSource.is(DamageTypes.INDIRECT_MAGIC)) {
-                return false; // 直接返回 false，取消伤害
+                return false;
             }
         }
-
-        // 3. 如果不是免疫的伤害，则调用父类的 hurt() 方法
         return super.hurt(pSource, pAmount);
     }
-
-
-    /**
-     * 【核心修改】龙息技能改为10%概率触发
-     */
     @Override
     public void performRangedAttack(@NotNull LivingEntity pTarget, float pVelocity) {
         double d0 = pTarget.getX() - this.getX();
         double d1 = pTarget.getEyeY() - this.getEyeY();
         double d2 = pTarget.getZ() - this.getZ();
-        Vec3 movement = new Vec3(d0, d1, d2); // 移动向量只需计算一次
-
-        // 【修改】有10%概率发射龙火球
-        if (this.hasDragonBreathSkill() && this.random.nextFloat() < 0.10F) { // 10% 概率
+        Vec3 movement = new Vec3(d0, d1, d2);
+        if (this.hasDragonBreathSkill() && this.random.nextFloat() < 0.10F) {
             this.playSound(SoundEvents.ENDER_DRAGON_SHOOT, 1.0F, 1.0F);
             DragonFireball dragonFireball = new DragonFireball(this.level(), this, movement);
             dragonFireball.setPos(this.getX(), this.getEyeY(), this.getZ());
             this.level().addFreshEntity(dragonFireball);
         } else {
-            // 90%概率或未解锁技能时，发射小火球
             this.playSound(SoundEvents.BLAZE_SHOOT, 1.0F, 1.0F);
             SmallFireball smallfireball = new SmallFireball(this.level(), this, movement);
             smallfireball.setPos(this.getX(), this.getEyeY(), this.getZ());
@@ -218,16 +186,22 @@ public class CombatBlaze extends AbstractWarriorEntity implements RangedAttackMo
         }
     }
 
+    /**
+     * 【【【修复点 2：修改 createAttributes】】】
+     */
     public static AttributeSupplier.@NotNull Builder createAttributes() {
         return Mob.createMobAttributes()
-                .add(Attributes.MAX_HEALTH, 20.0D) // 基础生命: 20
-                .add(Attributes.FLYING_SPEED, 0.5D) // 飞行速度: 0.5
-                .add(Attributes.MOVEMENT_SPEED, 0.3D) // 移动速度: 0.3
-                .add(Attributes.ATTACK_DAMAGE, 0.0D) // 攻击力: 0.0
-                .add(Attributes.ARMOR, 0.0D) // 盔甲值: 0
-                .add(Attributes.FOLLOW_RANGE, 16.0D); // 索敌范围: 16
+                .add(Attributes.MAX_HEALTH, 20.0D)
+                .add(Attributes.FLYING_SPEED, 0.5D)
+                .add(Attributes.MOVEMENT_SPEED, 0.3D)
+                .add(Attributes.ATTACK_DAMAGE, 0.0D)
+                .add(Attributes.ARMOR, 0.0D)
+                .add(Attributes.FOLLOW_RANGE, 32.0D);
     }
 
+    /**
+     * 【【【修复点 1：修改 registerGoals】】】
+     */
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
@@ -239,14 +213,16 @@ public class CombatBlaze extends AbstractWarriorEntity implements RangedAttackMo
             this.goalSelector.addGoal(1, this.eatBlockFoodGoal);
         }
 
-        // 【核心修改】战斗AI: 飞起来攻击
+        // 战斗AI
         this.goalSelector.addGoal(2, new BlazeAttackGoal(this));
 
-        // 【核心修改】非战斗AI: 降落并在地面行走
-        this.goalSelector.addGoal(3, new BlazeIdleGoal(this));
+        // 【修改】交换 Prio 3 和 5
+        // Prio 3: 跟随主人 (更高优先级)
+        this.goalSelector.addGoal(3, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F));
+        // Prio 5: 空闲悬浮 (更低优先级)
+        this.goalSelector.addGoal(5, new BlazeIdleGoal(this));
 
         // 其他通用AI
-        this.goalSelector.addGoal(5, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F));
         this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 8.0F));
         this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
 
@@ -256,55 +232,37 @@ public class CombatBlaze extends AbstractWarriorEntity implements RangedAttackMo
         this.targetSelector.addGoal(3, new HurtByTargetGoal(this).setAlertOthers());
     }
 
+    // (setWarriorLevel 和 getBonusDamageReduction 保持不变)
     @Override
     public void setWarriorLevel(int level) {
-        super.setWarriorLevel(level); // 负责应用基础生命值和调用 getBonusDamageReduction
+        super.setWarriorLevel(level);
         if (this.level().isClientSide()) return;
-
-        // x = 吃过的不同种 RITUAL_FOOD 数量
-        // (我们使用仪式食物数量来保持与 Zobmie/Wither 一致)
         int x = this.getEatenRitualFoodsCount();
-
-        // 1. 更新飞行速度 (基于 x)
         AttributeInstance flySpeedAttr = this.getAttribute(Attributes.FLYING_SPEED);
         if (flySpeedAttr != null) {
-            // 基础 0.5 + 0.01 * x
             flySpeedAttr.setBaseValue(0.5D + (x * 0.01D));
         }
-
-        // 2. 更新盔甲 (基于 level)
         AttributeInstance armorAttr = this.getAttribute(Attributes.ARMOR);
         if (armorAttr != null) {
-            // 基础 0 + 1 * 等级
             armorAttr.setBaseValue(level * 1.0D);
         }
-
-        // 3. 更新火球伤害 (基于 level)
-        // 公式: 6.0 + (0.3 * 等级)
         this.setFireballDamage(6.0f + 0.3f * level);
-
-        // 4. 更新攻击间隔 (基于技能)
-        // 公式: 40 (基础), 20 (有技能)
         int finalInterval = this.hasAttackSpeedSkill() ? 20 : 40;
         this.setAttackInterval(finalInterval);
     }
-
     @Override
     protected float getBonusDamageReduction() {
-        // (我们使用仪式食物数量来保持与 Zobmie/Wither 一致)
         int x = this.getEatenRitualFoodsCount();
-        // 免伤 = 0.02 * x
         float reduction = x * 0.02f;
-        return Math.min(1.0f, reduction); // 封顶 100%
+        return Math.min(1.0f, reduction);
     }
 
-    // 【恢复】让实体不受重力影响
+    // (其他杂项方法保持不变)
     @Override public boolean isNoGravity() { return true; }
-
     @Override protected int getFinalLevelCap() { return 20; }
     @Override protected int getInitialLevelCap() { return 10; }
     @Override protected int getLevelCapIncrease() { return 10; }
-    @Override protected double getInitialHealth() { return 10.0; }
+    @Override protected double getInitialHealth() { return 20.0; }
     @Override protected double getHealthPerLevel() { return 2.0; }
     @Override protected double getInitialAttack() { return 0; }
     @Override protected double getAttackPerLevel() { return 0; }
@@ -328,66 +286,44 @@ public class CombatBlaze extends AbstractWarriorEntity implements RangedAttackMo
     @Override protected SoundEvent getDeathSound() { return SoundEvents.BLAZE_DEATH; }
     @Override protected void playStepSound(@NotNull BlockPos pPos, @NotNull BlockState pState) { }
 
-    // --- 【恢复】战斗AI内部类 ---
+    // (BlazeAttackGoal 和 SmoothBlazeMoveControl 内部类保持 V2 不变)
     static class BlazeAttackGoal extends Goal {
         private final CombatBlaze blaze;
         private int attackCooldown = 0;
-
         public BlazeAttackGoal(CombatBlaze blaze) {
             this.blaze = blaze;
             this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
         }
-
         @Override
         public boolean canUse() {
-            // 只在有目标时激活 (战斗状态)
             return this.blaze.getTarget() != null;
         }
-
         @Override
         public void stop() {
             this.attackCooldown = 0;
+            this.blaze.getMoveControl().setWantedPosition(this.blaze.getX(), this.blaze.getY(), this.blaze.getZ(), 0);
         }
-
         @Override
         public boolean requiresUpdateEveryTick() {
             return true;
         }
-
         @Override
         public void tick() {
             LivingEntity target = this.blaze.getTarget();
             if (target == null || !target.isAlive()) {
                 return;
             }
-
             this.blaze.getLookControl().setLookAt(target, 10.0F, 10.0F);
-
-            // 核心逻辑: 飞到比目标高3格的位置
-            double desiredY = target.getY() + 3.0D;
-            double yDiff = desiredY - this.blaze.getY();
-            if (Math.abs(yDiff) > 1.0D) { // 如果高度差大于1，调整高度
-                this.blaze.setDeltaMovement(this.blaze.getDeltaMovement().add(0, (yDiff > 0 ? 0.05 : -0.05), 0));
-            } else { // 高度合适，悬停
-                this.blaze.setDeltaMovement(this.blaze.getDeltaMovement().multiply(1, 0.5, 1));
-            }
-
-            double distSqr = this.blaze.distanceToSqr(target);
-            if (distSqr < 25.0D) { // 1. 离得太近 (小于5格) -> 后退
+            double idealX = target.getX();
+            double idealY = target.getY() + 3.0D;
+            double idealZ = target.getZ();
+            double distSqr = this.blaze.distanceToSqr(target.getX(), this.blaze.getY(), target.getZ());
+            if (distSqr < 25.0D) {
                 Vec3 awayVec = this.blaze.position().subtract(target.position()).normalize();
-                this.blaze.getMoveControl().setWantedPosition(this.blaze.getX() + awayVec.x, this.blaze.getY(), this.blaze.getZ() + awayVec.z, 1.0D);
-
-            } else if (distSqr > 64.0D) { // 2. 离得太远 (大于8格) -> 靠近
-                this.blaze.getMoveControl().setWantedPosition(target.getX(), this.blaze.getY(), target.getZ(), 1.0D);
-
-            } else { // 3. 【【【新增逻辑】】】 距离合适 (5-8格) -> 停止水平移动
-                // 告诉移动控制器 "飞向你现在的位置"，这会有效地停止水平飞行
-                // 允许 "任务2" 的悬停逻辑完全接管
-                this.blaze.getMoveControl().setWantedPosition(this.blaze.getX(), this.blaze.getY(), this.blaze.getZ(), 1.0D);
+                idealX = this.blaze.getX() + awayVec.x * 5.0;
+                idealZ = this.blaze.getZ() + awayVec.z * 5.0;
             }
-
-
-            // 攻击逻辑
+            this.blaze.getMoveControl().setWantedPosition(idealX, idealY, idealZ, 1.0D);
             if (this.attackCooldown > 0) {
                 this.attackCooldown--;
             }
@@ -397,44 +333,32 @@ public class CombatBlaze extends AbstractWarriorEntity implements RangedAttackMo
             }
         }
     }
-
-    // --- 【恢复】飞行移动控制器内部类 ---
-    static class BlazeMoveControl extends MoveControl {
+    static class SmoothBlazeMoveControl extends MoveControl {
         private final CombatBlaze blaze;
-        private int floatDuration;
-
-        public BlazeMoveControl(CombatBlaze pBlaze) {
+        public SmoothBlazeMoveControl(CombatBlaze pBlaze) {
             super(pBlaze);
             this.blaze = pBlaze;
         }
-
         @Override
         public void tick() {
             if (this.operation != MoveControl.Operation.MOVE_TO) {
-                return;
-            }
-            if (this.floatDuration-- <= 0) {
-                this.floatDuration += this.blaze.getRandom().nextInt(5) + 2;
-                Vec3 vec3 = new Vec3(this.wantedX - this.blaze.getX(), this.wantedY - this.blaze.getY(), this.wantedZ - this.blaze.getZ());
-                double d0 = vec3.length();
-                vec3 = vec3.normalize();
-                if (this.canReach(vec3, (int)Math.ceil(d0))) {
-                    this.blaze.setDeltaMovement(this.blaze.getDeltaMovement().add(vec3.scale(0.1)));
-                } else {
+                this.blaze.setDeltaMovement(this.blaze.getDeltaMovement().add(0.0, -0.02, 0.0));
+            } else {
+                Vec3 targetPos = new Vec3(this.wantedX, this.wantedY, this.wantedZ);
+                Vec3 blazePos = this.blaze.position();
+                Vec3 moveVec = targetPos.subtract(blazePos);
+                double distance = moveVec.length();
+                if (distance < 0.5) {
                     this.operation = MoveControl.Operation.WAIT;
+                    this.blaze.setDeltaMovement(this.blaze.getDeltaMovement().scale(0.5));
+                    return;
                 }
+                moveVec = moveVec.normalize();
+                double dynamicSpeed = this.speedModifier * (0.1 + 0.9 * Math.min(distance / 5.0, 1.0));
+                Vec3 desiredVelocity = moveVec.scale(dynamicSpeed);
+                Vec3 newVelocity = this.blaze.getDeltaMovement().lerp(desiredVelocity, 0.1);
+                this.blaze.setDeltaMovement(newVelocity);
             }
-        }
-
-        private boolean canReach(Vec3 pDirection, int pSteps) {
-            AABB aabb = this.blaze.getBoundingBox();
-            for (int i = 1; i < pSteps; ++i) {
-                aabb = aabb.move(pDirection);
-                if (!this.blaze.level().noCollision(this.blaze, aabb)) {
-                    return false;
-                }
-            }
-            return true;
         }
     }
 }

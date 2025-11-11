@@ -1,5 +1,7 @@
 package com.sake.mobfriends.entity;
 
+// 【【【新增导入AI】】】
+import com.sake.mobfriends.entity.ai.BlazeRefuelGoal;
 import com.sake.mobfriends.trading.TradeManager;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -12,6 +14,11 @@ import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+// 【【【新增导入AI】】】
+import net.minecraft.world.entity.ai.goal.FloatGoal;
+import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
+import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
+import net.minecraft.world.entity.ai.goal.WaterAvoidingRandomStrollGoal;
 import net.minecraft.world.entity.monster.Blaze;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.MerchantMenu;
@@ -25,6 +32,7 @@ import org.jetbrains.annotations.NotNull;
 import javax.annotation.Nullable;
 import java.util.OptionalInt;
 
+// (这个文件不再需要实现 MenuProvider 或拥有背包)
 public class BlazeNpcEntity extends Blaze implements Merchant {
 
     @Nullable
@@ -42,11 +50,19 @@ public class BlazeNpcEntity extends Blaze implements Merchant {
                 .add(Attributes.MOVEMENT_SPEED, 0.23D);
     }
 
+    // 【【【修改：添加AI逻辑】】】
     @Override
     protected void registerGoals() {
-        // AI 逻辑将在第三阶段添加
+        this.goalSelector.addGoal(0, new FloatGoal(this));
+        // 添加新的“添火”AI，优先级为1
+        this.goalSelector.addGoal(1, new BlazeRefuelGoal(this, 1.0D));
+        // 添加一些基础AI
+        this.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 1.0D));
+        this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 8.0F));
+        this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
     }
 
+    // (mobInteract 保持原样，只有交易逻辑)
     @Override
     public @NotNull InteractionResult mobInteract(Player pPlayer, @NotNull InteractionHand pHand) {
         if (this.isAlive() && this.getTradingPlayer() == null) {
@@ -59,6 +75,8 @@ public class BlazeNpcEntity extends Blaze implements Merchant {
         }
         return super.mobInteract(pPlayer, pHand);
     }
+
+    // --- (以下所有交易逻辑保持不变) ---
 
     public void startTrading(Player pPlayer) {
         this.setTradingPlayer(pPlayer);
@@ -129,5 +147,6 @@ public class BlazeNpcEntity extends Blaze implements Merchant {
     @Override
     public boolean isClientSide() { return this.level().isClientSide(); }
 
+    @Override
     public boolean canRestock() { return false; }
 }

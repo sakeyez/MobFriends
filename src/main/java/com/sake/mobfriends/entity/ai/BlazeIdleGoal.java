@@ -8,8 +8,8 @@ import net.minecraft.world.level.pathfinder.PathComputationType;
 import java.util.EnumSet;
 
 /**
- * 烈焰人空闲状态的AI - 【V3 悬浮版】
- * 实现了平滑的离地0.1格悬浮行走。
+ * 烈焰人空闲状态的AI - 【V4 修复版】
+ * 修复了导致其无法移动的 isPathfindable 检查
  */
 public class BlazeIdleGoal extends Goal {
     private final CombatBlaze blaze;
@@ -25,12 +25,11 @@ public class BlazeIdleGoal extends Goal {
         if (this.blaze.getTarget() != null) {
             return false;
         }
+        // 【【【修改】】】
+        // 确保 EatBlockFoodGoal 存在且正在运行时，此AI才让步
         return this.blaze.eatBlockFoodGoal == null || !this.blaze.eatBlockFoodGoal.isRunning();
     }
 
-    /**
-     * 【核心修复】AI启动时给一个短暂的延迟，防止立即移动。
-     */
     @Override
     public void start() {
         this.wanderCooldown = 20 + this.blaze.getRandom().nextInt(20);
@@ -38,18 +37,12 @@ public class BlazeIdleGoal extends Goal {
 
     @Override
     public void tick() {
-        // 只有当冷却结束后才寻找新目标
         if (this.wanderCooldown-- <= 0) {
             findAndMoveToHoverPos();
         }
     }
 
-    /**
-     * 【核心修复】寻找并移动到目标悬浮点的逻辑。
-     * 这次它会计算一个地面以上0.1格的精确目标点。
-     */
     private void findAndMoveToHoverPos() {
-        // 重置冷却时间，让下一次行走有间隔
         this.wanderCooldown = 120 + this.blaze.getRandom().nextInt(120);
 
         for (int i = 0; i < 10; i++) {
@@ -58,26 +51,26 @@ public class BlazeIdleGoal extends Goal {
             int z = this.blaze.getRandom().nextInt(21) - 10;
             BlockPos groundPos = findGround(currentPos.offset(x, 0, z));
 
-            // 检查目标点是否可达
-            if (this.blaze.level().getBlockState(groundPos.below()).isPathfindable(PathComputationType.LAND)) {
-                // --- 【你的绝妙想法】 ---
-                // 目标Y坐标 = 地面高度 + 0.1，实现悬浮效果！
-                double targetX = groundPos.getX() + 0.5;
-                double targetY = groundPos.getY() + 0.1;
-                double targetZ = groundPos.getZ() + 0.5;
+            // --- 【【【核心修复】】】 ---
+            // 移除了错误的 if (isPathfindable) 检查。
+            // 只要找到了地面，就直接飞过去。
 
-                // 命令移动控制器以悠闲的速度飞向这个悬浮点
-                this.blaze.getMoveControl().setWantedPosition(targetX, targetY, targetZ, 0.5D);
-                return; // 找到目标就结束
-            }
+            double targetX = groundPos.getX() + 0.5;
+            double targetY = groundPos.getY() + 0.1; // 悬浮
+            double targetZ = groundPos.getZ() + 0.5;
+
+            this.blaze.getMoveControl().setWantedPosition(targetX, targetY, targetZ, 0.5D); // 0.5D 悠闲速度
+            return;
         }
     }
 
     private BlockPos findGround(BlockPos startPos) {
         BlockPos.MutableBlockPos mutablePos = startPos.mutable();
+        // 向下找到第一个非空气方块
         while (mutablePos.getY() > blaze.level().getMinBuildHeight() && blaze.level().isEmptyBlock(mutablePos.below())) {
             mutablePos.move(0, -1, 0);
         }
+        // 从那里向上找到第一个空气方块（即地面）
         while (mutablePos.getY() < blaze.level().getMaxBuildHeight() && !blaze.level().isEmptyBlock(mutablePos)) {
             mutablePos.move(0, 1, 0);
         }
