@@ -1,0 +1,22 @@
+{
+  "trades": [
+    {
+      "buyA": "minecraft:beetroot",
+      "buyACount": 15,
+      "sell": "minecraft:emerald",
+      "sellCount": 1,
+      "maxUses": 16,
+      "xp": 15,
+      "priceMultiplier": 0.05
+    },
+    {
+      "buyA": "minecraft:emerald",
+      "buyACount": 8,
+      "sell": "minecraft:golden_carrot",
+      "sellCount": 1,
+      "maxUses": 10,
+      "xp": 10,
+      "priceMultiplier": 0.05
+    }
+  ]
+}

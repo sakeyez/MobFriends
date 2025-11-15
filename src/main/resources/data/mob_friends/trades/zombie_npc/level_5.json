@@ -1,0 +1,33 @@
+{
+  "trades": [
+    {
+      "buyA": "minecraft:emerald",
+      "buyACount": 32,
+      "sell": "minecraft:diamond_hoe",
+      "sellCount": 1,
+      "maxUses": 3,
+      "xp": 20,
+      "priceMultiplier": 0.05
+    },
+    {
+      "buyA": "mob_friends:zombie_token",
+      "buyACount": 10,
+      "buyB": "minecraft:dirt",
+      "buyBCount": 64,
+      "sell": "minecraft:podzol",
+      "sellCount": 16,
+      "maxUses": 12,
+      "xp": 30,
+      "priceMultiplier": 0.05
+    },
+    {
+      "buyA": "mob_friends:zombie_token",
+      "buyACount": 32,
+      "sell": "minecraft:enchanted_golden_apple",
+      "sellCount": 1,
+      "maxUses": 1,
+      "xp": 100,
+      "priceMultiplier": 0.05
+    }
+  ]
+}
