@@ -1,13 +1,17 @@
 package com.sake.mobfriends.entity;
 
+import com.sake.mobfriends.MobFriends; // 【新增】
+import com.sake.mobfriends.block.WorkstationBlockEntity; // 【新增】
+import com.sake.mobfriends.entity.ai.ReturnToWorkstationGoal;
 import com.sake.mobfriends.inventory.ZombieChestMenu;
 import com.sake.mobfriends.trading.TradeManager;
-import com.sake.mobfriends.world.SlimeInventoryManager; // 【【【新增导入】】】
+import com.sake.mobfriends.world.SlimeInventoryManager;
+import net.minecraft.core.BlockPos; // 【新增】
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerLevel; // 【【【新增导入】】】
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
@@ -34,23 +38,24 @@ import net.minecraft.world.item.trading.Merchant;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.trading.MerchantOffers;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity; // 【新增】
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.EnumSet;
 import java.util.OptionalInt;
 
-public class SlimeNpcEntity extends Slime implements Merchant, MenuProvider {
+// 【修改】实现新接口
+public class SlimeNpcEntity extends Slime implements Merchant, MenuProvider, IWorkstationNPC {
 
     @Nullable
     private MerchantOffers offers;
     @Nullable
     private Player tradingPlayer;
 
-    // 【【【修改点 1：移除实例背包】】】
-    // private final SimpleContainer inventory = new SimpleContainer(27); // (删除这行)
+    // 【【【新增字段】】】
+    @Nullable private BlockPos workstationPos = null;
 
-    // 【【【新增：为客户端AI提供一个空的假背包，防止崩溃】】】
     private static final SimpleContainer CLIENT_DUMMY_INVENTORY = new SimpleContainer(27);
 
     public SlimeNpcEntity(EntityType<? extends Slime> type, Level level) {
@@ -58,7 +63,6 @@ public class SlimeNpcEntity extends Slime implements Merchant, MenuProvider {
         this.moveControl = new SlimeNpcMoveControl(this);
     }
 
-    // (createAttributes 保持不变)
     public static AttributeSupplier.Builder createAttributes() {
         return Mob.createMobAttributes()
                 .add(Attributes.ATTACK_DAMAGE, 1.0D)
@@ -69,45 +73,46 @@ public class SlimeNpcEntity extends Slime implements Merchant, MenuProvider {
                 .add(Attributes.MOVEMENT_SPEED, 0.2D);
     }
 
-    // (registerGoals 保持不变)
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(1, new SlimeNpcFloatGoal(this));
+        this.goalSelector.addGoal(2, new ReturnToWorkstationGoal(this, 16.0D, 1.0D));
         this.goalSelector.addGoal(3, new SlimeNpcRandomDirectionGoal(this));
         this.goalSelector.addGoal(5, new SlimeNpcKeepOnJumpingGoal(this));
         this.goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 8.0F));
         this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
     }
+
+    // 【修改】添加NBT
     @Override
     public void addAdditionalSaveData(CompoundTag c) {
         super.addAdditionalSaveData(c);
-        // (背包NBT现在由 SlimeInventoryManager 处理，这里也不需要了)
-        // c.put("Inventory", ...);
-
-        // (移除 if (this.offers != null) ...)
+        // 【新增】保存工作站位置
+        if (this.workstationPos != null) {
+            c.putLong("WorkstationPos", this.workstationPos.asLong());
+        }
     }
 
-    /**
-     * 【【【修复：移除 NBT 中对 Offers 的读取】】】
-     */
+    // 【修改】添加NBT
     @Override
     public void readAdditionalSaveData(CompoundTag c) {
         super.readAdditionalSaveData(c);
-        // (背包NBT现在由 SlimeInventoryManager 处理，这里也不需要了)
-        // this.inventory.fromTag(...);
-
-        // (移除 if (c.contains("Offers", 10)) ...)
+        // 【新增】加载工作站位置
+        if (c.contains("WorkstationPos")) {
+            this.workstationPos = BlockPos.of(c.getLong("WorkstationPos"));
+        } else {
+            this.workstationPos = null;
+        }
     }
 
-    /**
-     * 【【【修改：从全局管理器获取背包】】】
-     */
     public SimpleContainer getInventory() {
         if (this.level().isClientSide()) {
             return CLIENT_DUMMY_INVENTORY;
         }
         return SlimeInventoryManager.get((ServerLevel) this.level()).getInventory();
     }
+
+    // (mobInteract 保持不变)
     @Override
     public @NotNull InteractionResult mobInteract(Player pPlayer, @NotNull InteractionHand pHand) {
         if (pPlayer.isShiftKeyDown()) {
@@ -127,8 +132,7 @@ public class SlimeNpcEntity extends Slime implements Merchant, MenuProvider {
         return super.mobInteract(pPlayer, pHand);
     }
 
-    // ... (交易相关的代码保持不变) ...
-
+    // (交易相关的代码)
     public void startTrading(Player pPlayer) {
         this.setTradingPlayer(pPlayer);
         this.openTradingScreen(pPlayer, this.getDisplayName());
@@ -159,13 +163,24 @@ public class SlimeNpcEntity extends Slime implements Merchant, MenuProvider {
         return this.tradingPlayer;
     }
 
+    // 【【【修改：重写 GETOFFERS】】】
     @Override
     public MerchantOffers getOffers() {
-        if (this.offers == null) {
-            ResourceLocation entityId = BuiltInRegistries.ENTITY_TYPE.getKey(this.getType());
-            this.offers = TradeManager.getOffersFor(entityId);
+        if (this.level().isClientSide()) {
+            return new MerchantOffers();
         }
-        return this.offers;
+        if (this.workstationPos == null) {
+            MobFriends.LOGGER.warn("NPC {} 尚未绑定工作站，无法提供交易。", this.getUUID());
+            return new MerchantOffers();
+        }
+        BlockEntity be = this.level().getBlockEntity(this.workstationPos);
+        if (!(be instanceof WorkstationBlockEntity workstation)) {
+            MobFriends.LOGGER.warn("NPC {} 无法在 {} 找到其工作站实体。", this.getUUID(), this.workstationPos);
+            return new MerchantOffers();
+        }
+        int currentLevel = workstation.getNpcLevel() + 1;
+        ResourceLocation entityId = BuiltInRegistries.ENTITY_TYPE.getKey(this.getType());
+        return TradeManager.getOffersFor(entityId, currentLevel);
     }
 
     @Override
@@ -173,11 +188,20 @@ public class SlimeNpcEntity extends Slime implements Merchant, MenuProvider {
         this.offers = pOffers;
     }
 
+
+
     @Override
     public void notifyTrade(@NotNull MerchantOffer pOffer) {
         pOffer.increaseUses();
         this.ambientSoundTime = -this.getAmbientSoundInterval();
-        this.playSound(SoundEvents.VILLAGER_YES, 1.0F, this.getVoicePitch());
+        // 【【【修复】】】
+        this.playSound(this.getNotifyTradeSound(), 1.0F, this.getVoicePitch());
+    }
+
+    @Override
+    public SoundEvent getNotifyTradeSound() {
+        // 【【【修复】】】(使用小史莱姆的声音，听起来更合适)
+        return SoundEvents.SLIME_SQUISH_SMALL;
     }
 
     @Override
@@ -192,64 +216,43 @@ public class SlimeNpcEntity extends Slime implements Merchant, MenuProvider {
     @Override
     public boolean showProgressBar() { return false; }
 
-    @Override
-    public SoundEvent getNotifyTradeSound() { return SoundEvents.VILLAGER_YES; }
 
     @Override
     public boolean isClientSide() { return this.level().isClientSide(); }
 
     public boolean canRestock() { return false; }
 
-    // 【【【修改点 6】】】
-    // 实现 MenuProvider 的两个方法
-
+    // (MenuProvider 方法保持不变)
     @Override
     public @NotNull Component getDisplayName() {
-        // 重用它自己的实体名称
         return this.getName();
     }
-
     @Nullable
     @Override
     public AbstractContainerMenu createMenu(int c, @NotNull Inventory i, @NotNull Player p) {
-        // (此方法只在服务器端调用，所以我们可以安全地转换)
-        // 从世界数据中获取那个唯一的共享背包
         SimpleContainer sharedInventory = SlimeInventoryManager.get((ServerLevel) this.level()).getInventory();
-
-        // 使用这个共享背包创建菜单
         return new ZombieChestMenu(c, i, sharedInventory);
     }
 
-    // ... (所有内部AI类 SlimeNpcMoveControl, SlimeNpcRandomDirectionGoal 等保持不变) ...
-
+    // (内部AI类 保持不变)
     static class SlimeNpcMoveControl extends MoveControl {
         private float yRot;
         private int jumpDelay;
         private final Slime slime;
         private boolean isAggressive;
-
         public SlimeNpcMoveControl(Slime pSlime) {
-            super(pSlime);
-            this.slime = pSlime;
-            this.yRot = 180.0F * pSlime.getYRot() / (float) Math.PI;
+            super(pSlime); this.slime = pSlime; this.yRot = 180.0F * pSlime.getYRot() / (float) Math.PI;
         }
-
         public void setDirection(float pYRot, boolean pAggressive) {
-            this.yRot = pYRot;
-            this.isAggressive = pAggressive;
+            this.yRot = pYRot; this.isAggressive = pAggressive;
         }
-
         public void setWantedMovement(double speed) {
-            this.speedModifier = speed;
-            this.operation = MoveControl.Operation.MOVE_TO;
+            this.speedModifier = speed; this.operation = MoveControl.Operation.MOVE_TO;
         }
-
         @Override
         public void tick() {
             this.mob.setYRot(this.rotlerp(this.mob.getYRot(), this.yRot, 90.0F));
-            this.mob.yHeadRot = this.mob.getYRot();
-            this.mob.yBodyRot = this.mob.getYRot();
-
+            this.mob.yHeadRot = this.mob.getYRot(); this.mob.yBodyRot = this.mob.getYRot();
             if (this.operation != MoveControl.Operation.MOVE_TO) {
                 this.mob.setZza(0.0F);
             } else {
@@ -258,12 +261,8 @@ public class SlimeNpcEntity extends Slime implements Merchant, MenuProvider {
                     this.mob.setSpeed((float)(this.speedModifier * this.mob.getAttributeValue(Attributes.MOVEMENT_SPEED)));
                     if (this.jumpDelay-- <= 0) {
                         this.jumpDelay = this.slime.getRandom().nextInt(20) + 10;
-                        if (this.isAggressive) {
-                            this.jumpDelay /= 3;
-                        }
-
+                        if (this.isAggressive) { this.jumpDelay /= 3; }
                         this.slime.getJumpControl().jump();
-
                         if (this.slime.getSize() > 0) {
                             SoundEvent jumpSound = this.slime.isTiny() ? SoundEvents.SLIME_JUMP_SMALL : SoundEvents.SLIME_JUMP;
                             float volume = 0.4F * (float)this.slime.getSize();
@@ -272,9 +271,7 @@ public class SlimeNpcEntity extends Slime implements Merchant, MenuProvider {
                             this.slime.playSound(jumpSound, volume, pitch);
                         }
                     } else {
-                        this.slime.xxa = 0.0F;
-                        this.slime.zza = 0.0F;
-                        this.mob.setSpeed(0.0F);
+                        this.slime.xxa = 0.0F; this.slime.zza = 0.0F; this.mob.setSpeed(0.0F);
                     }
                 } else {
                     this.mob.setSpeed((float)(this.speedModifier * this.mob.getAttributeValue(Attributes.MOVEMENT_SPEED)));
@@ -282,25 +279,13 @@ public class SlimeNpcEntity extends Slime implements Merchant, MenuProvider {
             }
         }
     }
-
-
     static class SlimeNpcRandomDirectionGoal extends Goal {
-        private final Slime slime;
-        private float chosenDegrees;
-        private int nextRandomizeTime;
-
-        public SlimeNpcRandomDirectionGoal(Slime slime) {
-            this.slime = slime;
-            this.setFlags(EnumSet.of(Goal.Flag.LOOK));
-        }
-
+        private final Slime slime; private float chosenDegrees; private int nextRandomizeTime;
+        public SlimeNpcRandomDirectionGoal(Slime slime) { this.slime = slime; this.setFlags(EnumSet.of(Goal.Flag.LOOK)); }
         @Override
         public boolean canUse() {
-            return this.slime.getTarget() == null
-                    && (this.slime.onGround() || this.slime.isInWater() || this.slime.isInLava())
-                    && this.slime.getMoveControl() instanceof SlimeNpcMoveControl;
+            return this.slime.getTarget() == null && (this.slime.onGround() || this.slime.isInWater() || this.slime.isInLava()) && this.slime.getMoveControl() instanceof SlimeNpcMoveControl;
         }
-
         @Override
         public void tick() {
             if (--this.nextRandomizeTime <= 0) {
@@ -310,46 +295,29 @@ public class SlimeNpcEntity extends Slime implements Merchant, MenuProvider {
             ((SlimeNpcMoveControl)this.slime.getMoveControl()).setDirection(this.chosenDegrees, false);
         }
     }
-
     static class SlimeNpcKeepOnJumpingGoal extends Goal {
         private final Slime slime;
-
-        public SlimeNpcKeepOnJumpingGoal(Slime slime) {
-            this.slime = slime;
-            this.setFlags(EnumSet.of(Goal.Flag.JUMP, Goal.Flag.MOVE));
-        }
-
+        public SlimeNpcKeepOnJumpingGoal(Slime slime) { this.slime = slime; this.setFlags(EnumSet.of(Goal.Flag.JUMP, Goal.Flag.MOVE)); }
         @Override
         public boolean canUse() {
             return !this.slime.isPassenger() && this.slime.getMoveControl() instanceof SlimeNpcMoveControl;
         }
-
         @Override
         public void tick() {
             ((SlimeNpcMoveControl)this.slime.getMoveControl()).setWantedMovement(1.0);
         }
     }
-
     static class SlimeNpcFloatGoal extends Goal {
         private final Slime slime;
-
         public SlimeNpcFloatGoal(Slime slime) {
-            this.slime = slime;
-            this.setFlags(EnumSet.of(Goal.Flag.JUMP, Goal.Flag.MOVE));
-            slime.getNavigation().setCanFloat(true);
+            this.slime = slime; this.setFlags(EnumSet.of(Goal.Flag.JUMP, Goal.Flag.MOVE)); slime.getNavigation().setCanFloat(true);
         }
-
         @Override
         public boolean canUse() {
-            return (this.slime.isInWater() || this.slime.isInLava())
-                    && this.slime.getMoveControl() instanceof SlimeNpcMoveControl;
+            return (this.slime.isInWater() || this.slime.isInLava()) && this.slime.getMoveControl() instanceof SlimeNpcMoveControl;
         }
-
         @Override
-        public boolean requiresUpdateEveryTick() {
-            return true;
-        }
-
+        public boolean requiresUpdateEveryTick() { return true; }
         @Override
         public void tick() {
             if (this.slime.getRandom().nextFloat() < 0.8F) {
@@ -357,5 +325,18 @@ public class SlimeNpcEntity extends Slime implements Merchant, MenuProvider {
             }
             ((SlimeNpcMoveControl)this.slime.getMoveControl()).setWantedMovement(1.2);
         }
+    }
+
+    // --- 【【【新增：IWorkstationNPC 实现】】】 ---
+
+    @Override
+    public void setWorkstationPos(BlockPos pos) {
+        this.workstationPos = pos;
+    }
+
+    @Override
+    @Nullable
+    public BlockPos getWorkstationPos() {
+        return this.workstationPos;
     }
 }

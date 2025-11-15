@@ -84,6 +84,24 @@ public class ModItems {
                     new FoodProperties.Builder().nutrition(10).saturationModifier(1.2f).build()
             ).rarity(Rarity.RARE))); // 让它显示为稀有
 
+
+    public static final Supplier<Item> ZOMBIE_BLOCK = ITEMS.register("zombie_block",
+            () -> new net.minecraft.world.item.BlockItem(ModBlocks.ZOMBIE_BLOCK.get(), new Item.Properties()));
+
+    public static final Supplier<Item> SKELETON_BLOCK = ITEMS.register("skeleton_block",
+            () -> new net.minecraft.world.item.BlockItem(ModBlocks.SKELETON_BLOCK.get(), new Item.Properties()));
+
+    public static final Supplier<Item> CREEPER_BLOCK = ITEMS.register("creeper_block",
+            () -> new net.minecraft.world.item.BlockItem(ModBlocks.CREEPER_BLOCK.get(), new Item.Properties()));
+
+    public static final Supplier<Item> ENDERMAN_BLOCK = ITEMS.register("enderman_block",
+            () -> new net.minecraft.world.item.BlockItem(ModBlocks.ENDERMAN_BLOCK.get(), new Item.Properties()));
+
+    public static final Supplier<Item> SLIME_BLOCK = ITEMS.register("slime_block",
+            () -> new net.minecraft.world.item.BlockItem(ModBlocks.SLIME_BLOCK.get(), new Item.Properties()));
+
+    public static final Supplier<Item> BLAZE_BLOCK = ITEMS.register("blaze_block",
+            () -> new net.minecraft.world.item.BlockItem(ModBlocks.BLAZE_BLOCK.get(), new Item.Properties()));
     // 刷怪蛋
 
     public static final Supplier<Item> ZOMBIE_NPC_SPAWN_EGG = ITEMS.register("zombie_npc_spawn_egg",

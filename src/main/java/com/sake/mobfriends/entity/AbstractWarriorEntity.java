@@ -55,7 +55,7 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
 
     private static final EntityDataAccessor<Integer> DATA_FOOD_HEAL_TIMER = SynchedEntityData.defineId(AbstractWarriorEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Float> DATA_FOOD_HEAL_AMOUNT = SynchedEntityData.defineId(AbstractWarriorEntity.class, EntityDataSerializers.FLOAT);
-
+    protected static final EntityDataAccessor<Integer> DATA_ATTACK_ANIM_TICKS = SynchedEntityData.defineId(AbstractWarriorEntity.class, EntityDataSerializers.INT);
 
     private final Set<ResourceLocation> eatenDiningFoods = new HashSet<>();
     private final Set<ResourceLocation> eatenRitualFoods = new HashSet<>();
@@ -83,6 +83,7 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
         builder.define(DATA_DAMAGE_REDUCTION, 0.0f);
         builder.define(DATA_FOOD_HEAL_TIMER, 0);
         builder.define(DATA_FOOD_HEAL_AMOUNT, 0.0f);
+        builder.define(DATA_ATTACK_ANIM_TICKS, 0);
     }
 
     @Override
@@ -147,6 +148,11 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
                 this.heal(this.getFoodHealAmount());
             }
             this.setFoodHealTimer(timer - 1);
+        }
+        int attackTicks = this.getAttackAnimTicks();
+        if (attackTicks > 0) {
+            // 如果计时器 > 0，就每 tick 减 1
+            this.entityData.set(DATA_ATTACK_ANIM_TICKS, attackTicks - 1);
         }
     }
 
@@ -426,7 +432,19 @@ public abstract class AbstractWarriorEntity extends TamableAnimal {
             this.setDamageReduction(totalReduction);
         }
     }
+    public void triggerAttackAnimation() {
+        if (!this.level().isClientSide()) {
+            // 0.5秒的动画 (10 ticks)
+            this.entityData.set(DATA_ATTACK_ANIM_TICKS, 10);
+        }
+    }
 
+    /**
+     * （客户端）模型调用此方法来读取动画进度
+     */
+    public int getAttackAnimTicks() {
+        return this.entityData.get(DATA_ATTACK_ANIM_TICKS);
+    }
     public int getHappiness() { return this.entityData.get(DATA_HAPPINESS); }
     public void setHappiness(int happiness) { this.entityData.set(DATA_HAPPINESS, happiness); }
     public int getLevelCap() { return this.entityData.get(DATA_LEVEL_CAP); }

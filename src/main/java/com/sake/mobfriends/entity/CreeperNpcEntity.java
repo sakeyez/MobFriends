@@ -1,9 +1,12 @@
 package com.sake.mobfriends.entity;
 
-// 【新增】导入
+import com.sake.mobfriends.MobFriends; // 【新增】
+import com.sake.mobfriends.block.WorkstationBlockEntity; // 【新增】
 import com.sake.mobfriends.entity.ai.CreeperEngineerGoal;
 import com.sake.mobfriends.entity.ai.DepositItemsGoal;
+import com.sake.mobfriends.entity.ai.ReturnToWorkstationGoal;
 import com.sake.mobfriends.inventory.ZombieChestMenu;
+import net.minecraft.core.BlockPos; // 【新增】
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleContainer;
@@ -34,20 +37,23 @@ import net.minecraft.world.item.trading.Merchant;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.trading.MerchantOffers;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity; // 【新增】
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
 import java.util.OptionalInt;
 
-// 【修改】实现 MenuProvider 来提供背包GUI
-public class CreeperNpcEntity extends Creeper implements Merchant, MenuProvider {
+// 【修改】实现新接口
+public class CreeperNpcEntity extends Creeper implements Merchant, MenuProvider, IWorkstationNPC {
 
     @Nullable
     private MerchantOffers offers;
     @Nullable
     private Player tradingPlayer;
 
-    // 【新增】背包，和僵尸农夫一样
+    // 【【【新增字段】】】
+    @Nullable private BlockPos workstationPos = null;
+
     private final SimpleContainer inventory = new SimpleContainer(27);
 
     public CreeperNpcEntity(EntityType<? extends Creeper> type, Level level) {
@@ -60,51 +66,49 @@ public class CreeperNpcEntity extends Creeper implements Merchant, MenuProvider 
                 .add(Attributes.MOVEMENT_SPEED, 0.25D);
     }
 
-    // 【修改】重写 registerGoals
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
-
-        // --- 新增AI ---
         this.goalSelector.addGoal(1, new CreeperEngineerGoal(this, 0.8D));
-        // 苦力怕工程师没有产出物品，所以不需要 DepositItemsGoal
-        // 如果你未来的设计（比如精密构件）产出了物品，再取消下面这行的注释
-        // this.goalSelector.addGoal(2, new DepositItemsGoal(this, 0.8D));
-
+        this.goalSelector.addGoal(3, new ReturnToWorkstationGoal(this, 16.0D, 1.0D));
         this.goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 0.8D));
         this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 8.0F));
         this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
     }
 
-    // 【新增】背包相关方法 (复制自 ZombieNpcEntity)
     public SimpleContainer getInventory() {
         return this.inventory;
     }
 
+    // 【修改】添加NBT
     @Override
     public void addAdditionalSaveData(CompoundTag c) {
         super.addAdditionalSaveData(c);
         c.put("Inventory", this.inventory.createTag(this.level().registryAccess()));
-        // 【【【修改点：移除】】】
-        // if (this.offers != null) {
-        //     c.put("Offers", this.offers.save(this.level().registryAccess()));
-        // }
+        // 【新增】保存工作站位置
+        if (this.workstationPos != null) {
+            c.putLong("WorkstationPos", this.workstationPos.asLong());
+        }
+        // 移除旧的 offers 保存
     }
 
+    // 【修改】添加NBT
     @Override
     public void readAdditionalSaveData(CompoundTag c) {
         super.readAdditionalSaveData(c);
         this.inventory.fromTag(c.getList("Inventory", 10), this.level().registryAccess());
-        // 【【【修改点：移除】】】
-        // if (c.contains("Offers", 10)) {
-        //     this.offers = MerchantOffers.load(this.level().registryAccess(), c.getCompound("Offers")).orElse(null);
-        // }
+        // 【新增】加载工作站位置
+        if (c.contains("WorkstationPos")) {
+            this.workstationPos = BlockPos.of(c.getLong("WorkstationPos"));
+        } else {
+            this.workstationPos = null;
+        }
+        // 移除旧的 offers 加载
     }
 
-    // --- 【修改】交互逻辑 ---
+    // (mobInteract 保持不变)
     @Override
     public @NotNull InteractionResult mobInteract(Player pPlayer, @NotNull InteractionHand pHand) {
-        // 【新增】潜行右键打开背包GUI
         if (pPlayer.isShiftKeyDown()) {
             if (!this.level().isClientSide) {
                 pPlayer.openMenu(this);
@@ -112,7 +116,6 @@ public class CreeperNpcEntity extends Creeper implements Merchant, MenuProvider 
             return InteractionResult.sidedSuccess(this.level().isClientSide());
         }
 
-        // 交易逻辑
         if (this.isAlive() && this.getTradingPlayer() == null) {
             if (pHand == InteractionHand.MAIN_HAND) {
                 if (!this.level().isClientSide()) {
@@ -124,7 +127,6 @@ public class CreeperNpcEntity extends Creeper implements Merchant, MenuProvider 
         return super.mobInteract(pPlayer, pHand);
     }
 
-    // 【新增】MenuProvider 实现
     @Override
     public @NotNull Component getDisplayName() {
         return this.getName();
@@ -133,7 +135,6 @@ public class CreeperNpcEntity extends Creeper implements Merchant, MenuProvider 
     @Nullable
     @Override
     public AbstractContainerMenu createMenu(int c, @NotNull Inventory i, @NotNull Player p) {
-        // 复用僵尸的背包菜单
         return new ZombieChestMenu(c, i, this.inventory);
     }
 
@@ -168,13 +169,24 @@ public class CreeperNpcEntity extends Creeper implements Merchant, MenuProvider 
         return this.tradingPlayer;
     }
 
+    // 【【【修改：重写 GETOFFERS】】】
     @Override
     public MerchantOffers getOffers() {
-        if (this.offers == null) {
-            ResourceLocation entityId = BuiltInRegistries.ENTITY_TYPE.getKey(this.getType());
-            this.offers = TradeManager.getOffersFor(entityId);
+        if (this.level().isClientSide()) {
+            return new MerchantOffers();
         }
-        return this.offers;
+        if (this.workstationPos == null) {
+            MobFriends.LOGGER.warn("NPC {} 尚未绑定工作站，无法提供交易。", this.getUUID());
+            return new MerchantOffers();
+        }
+        BlockEntity be = this.level().getBlockEntity(this.workstationPos);
+        if (!(be instanceof WorkstationBlockEntity workstation)) {
+            MobFriends.LOGGER.warn("NPC {} 无法在 {} 找到其工作站实体。", this.getUUID(), this.workstationPos);
+            return new MerchantOffers();
+        }
+        int currentLevel = workstation.getNpcLevel() + 1;
+        ResourceLocation entityId = BuiltInRegistries.ENTITY_TYPE.getKey(this.getType());
+        return TradeManager.getOffersFor(entityId, currentLevel);
     }
 
     @Override
@@ -182,12 +194,7 @@ public class CreeperNpcEntity extends Creeper implements Merchant, MenuProvider 
         this.offers = pOffers;
     }
 
-    @Override
-    public void notifyTrade(@NotNull MerchantOffer pOffer) {
-        pOffer.increaseUses();
-        this.ambientSoundTime = -this.getAmbientSoundInterval();
-        this.playSound(SoundEvents.VILLAGER_YES, 1.0F, this.getVoicePitch());
-    }
+
 
     @Override
     public void notifyTradeUpdated(@NotNull ItemStack pStack) {}
@@ -201,11 +208,35 @@ public class CreeperNpcEntity extends Creeper implements Merchant, MenuProvider 
     @Override
     public boolean showProgressBar() { return false; }
 
-    @Override
-    public SoundEvent getNotifyTradeSound() { return SoundEvents.VILLAGER_YES; }
+
 
     @Override
     public boolean isClientSide() { return this.level().isClientSide(); }
 
     public boolean canRestock() { return false; }
+
+    @Override
+    public void notifyTrade(@NotNull MerchantOffer pOffer) {
+        pOffer.increaseUses();
+        this.ambientSoundTime = -this.getAmbientSoundInterval();
+        // 【【【修复】】】
+        this.playSound(this.getNotifyTradeSound(), 1.0F, this.getVoicePitch());
+    }
+
+    @Override
+    public SoundEvent getNotifyTradeSound() {
+        // 【【【修复】】】(使用 "Hurt" 声音，因为它很短)
+        return SoundEvents.CREEPER_HURT;
+    }
+
+    @Override
+    public void setWorkstationPos(BlockPos pos) {
+        this.workstationPos = pos;
+    }
+
+    @Override
+    @Nullable
+    public BlockPos getWorkstationPos() {
+        return this.workstationPos;
+    }
 }

@@ -33,6 +33,13 @@ public class ModCreativeTabs {
                         pOutput.accept(ModItems.SLIME_TOKEN.get());
                         pOutput.accept(ModItems.BLAZE_TOKEN.get());
 
+                        pOutput.accept(ModItems.ZOMBIE_BLOCK.get());
+                        pOutput.accept(ModItems.SKELETON_BLOCK.get());
+                        pOutput.accept(ModItems.CREEPER_BLOCK.get());
+                        pOutput.accept(ModItems.ENDERMAN_BLOCK.get());
+                        pOutput.accept(ModItems.SLIME_BLOCK.get());
+                        pOutput.accept(ModItems.BLAZE_BLOCK.get());
+
                         pOutput.accept(ModItems.COIN.get());
                         pOutput.accept(ModItems.POWDER.get());
 

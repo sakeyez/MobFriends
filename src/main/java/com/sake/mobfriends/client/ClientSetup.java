@@ -27,6 +27,7 @@ import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 @EventBusSubscriber(modid = MobFriends.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class ClientSetup {
 
+
     // 僵尸战士的盔甲层 (保持不变)
     public static final ModelLayerLocation COMBAT_ZOMBIE_INNER_ARMOR_LAYER = new ModelLayerLocation(
             ResourceLocation.fromNamespaceAndPath(MobFriends.MOD_ID, "combat_zombie_inner_armor"), "main");
@@ -57,6 +58,7 @@ public class ClientSetup {
     @SubscribeEvent
     public static void onRegisterLayerDefinitions(final EntityRenderersEvent.RegisterLayerDefinitions event) {
         // 注册僵尸战士的模型层
+
         event.registerLayerDefinition(CombatZombieModel.LAYER_LOCATION, CombatZombieModel::createBodyLayer);
         event.registerLayerDefinition(COMBAT_ZOMBIE_INNER_ARMOR_LAYER, () -> LayerDefinition.create(HumanoidModel.createMesh(new CubeDeformation(0.5F), 0.0f), 64, 32));
         event.registerLayerDefinition(COMBAT_ZOMBIE_OUTER_ARMOR_LAYER, () -> LayerDefinition.create(HumanoidModel.createMesh(new CubeDeformation(1.0F), 0.0f), 64, 32));

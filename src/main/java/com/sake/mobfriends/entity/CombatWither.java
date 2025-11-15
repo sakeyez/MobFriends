@@ -127,6 +127,8 @@ public class CombatWither extends AbstractWarriorEntity {
 
         // --- 3. 施加 Debuff ---
         if (success) {
+
+            this.triggerAttackAnimation();
             final int DURATION_IN_TICKS = 200; // 【修改】10 秒
 
             // --- 1. 凋零 Wither (上限 III) ---

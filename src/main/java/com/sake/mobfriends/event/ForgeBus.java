@@ -47,6 +47,8 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.event.AddReloadListenerEvent; // 【【【新增】】】
+import com.sake.mobfriends.trading.TradeManager; // 【【【新增】】】
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
@@ -65,6 +67,12 @@ import java.util.function.Supplier;
 public class ForgeBus {
 
 
+    private static final TradeManager TRADE_MANAGER = new TradeManager();
+
+    @SubscribeEvent
+    public static void onAddReloadListeners(AddReloadListenerEvent event) {
+        event.addListener(TRADE_MANAGER);
+    }
 
     @SubscribeEvent
     public static void onMobFinishedEating(MobFinishedEatingEvent event) {

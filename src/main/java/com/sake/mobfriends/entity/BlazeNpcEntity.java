@@ -1,9 +1,13 @@
 package com.sake.mobfriends.entity;
 
-// 【【【新增导入AI】】】
+import com.sake.mobfriends.MobFriends; // 【新增】
+import com.sake.mobfriends.block.WorkstationBlockEntity; // 【新增】
 import com.sake.mobfriends.entity.ai.BlazeRefuelGoal;
+import com.sake.mobfriends.entity.ai.ReturnToWorkstationGoal;
 import com.sake.mobfriends.trading.TradeManager;
+import net.minecraft.core.BlockPos; // 【新增】
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag; // 【新增】
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
@@ -14,7 +18,6 @@ import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-// 【【【新增导入AI】】】
 import net.minecraft.world.entity.ai.goal.FloatGoal;
 import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
 import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
@@ -27,18 +30,23 @@ import net.minecraft.world.item.trading.Merchant;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.trading.MerchantOffers;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity; // 【新增】
 import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nullable;
+
 import java.util.OptionalInt;
 
-// (这个文件不再需要实现 MenuProvider 或拥有背包)
-public class BlazeNpcEntity extends Blaze implements Merchant {
+// 【修改】实现新接口
+public class BlazeNpcEntity extends Blaze implements Merchant, IWorkstationNPC {
 
     @Nullable
     private MerchantOffers offers;
     @Nullable
     private Player tradingPlayer;
+
+    // 【【【新增字段】】】
+    @Nullable private BlockPos workstationPos = null;
 
     public BlazeNpcEntity(EntityType<? extends Blaze> type, Level level) {
         super(type, level);
@@ -50,19 +58,37 @@ public class BlazeNpcEntity extends Blaze implements Merchant {
                 .add(Attributes.MOVEMENT_SPEED, 0.23D);
     }
 
-    // 【【【修改：添加AI逻辑】】】
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
-        // 添加新的“添火”AI，优先级为1
         this.goalSelector.addGoal(1, new BlazeRefuelGoal(this, 1.0D));
-        // 添加一些基础AI
+        this.goalSelector.addGoal(3, new ReturnToWorkstationGoal(this, 16.0D, 1.0D));
         this.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 1.0D));
         this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 8.0F));
         this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
     }
 
-    // (mobInteract 保持原样，只有交易逻辑)
+    // 【【【新增NBT】】】
+    @Override
+    public void addAdditionalSaveData(CompoundTag c) {
+        super.addAdditionalSaveData(c);
+        if (this.workstationPos != null) {
+            c.putLong("WorkstationPos", this.workstationPos.asLong());
+        }
+    }
+
+    // 【【【新增NBT】】】
+    @Override
+    public void readAdditionalSaveData(CompoundTag c) {
+        super.readAdditionalSaveData(c);
+        if (c.contains("WorkstationPos")) {
+            this.workstationPos = BlockPos.of(c.getLong("WorkstationPos"));
+        } else {
+            this.workstationPos = null;
+        }
+    }
+
+    // (mobInteract 保持不变)
     @Override
     public @NotNull InteractionResult mobInteract(Player pPlayer, @NotNull InteractionHand pHand) {
         if (this.isAlive() && this.getTradingPlayer() == null) {
@@ -76,8 +102,7 @@ public class BlazeNpcEntity extends Blaze implements Merchant {
         return super.mobInteract(pPlayer, pHand);
     }
 
-    // --- (以下所有交易逻辑保持不变) ---
-
+    // --- (交易逻辑) ---
     public void startTrading(Player pPlayer) {
         this.setTradingPlayer(pPlayer);
         this.openTradingScreen(pPlayer, this.getDisplayName());
@@ -108,13 +133,24 @@ public class BlazeNpcEntity extends Blaze implements Merchant {
         return this.tradingPlayer;
     }
 
+    // 【【【修改：重写 GETOFFERS】】】
     @Override
     public MerchantOffers getOffers() {
-        if (this.offers == null) {
-            ResourceLocation entityId = BuiltInRegistries.ENTITY_TYPE.getKey(this.getType());
-            this.offers = TradeManager.getOffersFor(entityId);
+        if (this.level().isClientSide()) {
+            return new MerchantOffers();
         }
-        return this.offers;
+        if (this.workstationPos == null) {
+            MobFriends.LOGGER.warn("NPC {} 尚未绑定工作站，无法提供交易。", this.getUUID());
+            return new MerchantOffers();
+        }
+        BlockEntity be = this.level().getBlockEntity(this.workstationPos);
+        if (!(be instanceof WorkstationBlockEntity workstation)) {
+            MobFriends.LOGGER.warn("NPC {} 无法在 {} 找到其工作站实体。", this.getUUID(), this.workstationPos);
+            return new MerchantOffers();
+        }
+        int currentLevel = workstation.getNpcLevel() + 1;
+        ResourceLocation entityId = BuiltInRegistries.ENTITY_TYPE.getKey(this.getType());
+        return TradeManager.getOffersFor(entityId, currentLevel);
     }
 
     @Override
@@ -126,7 +162,14 @@ public class BlazeNpcEntity extends Blaze implements Merchant {
     public void notifyTrade(@NotNull MerchantOffer pOffer) {
         pOffer.increaseUses();
         this.ambientSoundTime = -this.getAmbientSoundInterval();
-        this.playSound(SoundEvents.VILLAGER_YES, 1.0F, this.getVoicePitch());
+        // 【【【修复】】】
+        this.playSound(this.getNotifyTradeSound(), 1.0F, this.getVoicePitch());
+    }
+
+    @Override
+    public SoundEvent getNotifyTradeSound() {
+        // 【【【修复】】】
+        return SoundEvents.BLAZE_AMBIENT;
     }
 
     @Override
@@ -141,12 +184,24 @@ public class BlazeNpcEntity extends Blaze implements Merchant {
     @Override
     public boolean showProgressBar() { return false; }
 
-    @Override
-    public SoundEvent getNotifyTradeSound() { return SoundEvents.VILLAGER_YES; }
+
 
     @Override
     public boolean isClientSide() { return this.level().isClientSide(); }
 
     @Override
     public boolean canRestock() { return false; }
+
+    // --- 【【【新增：IWorkstationNPC 实现】】】 ---
+
+    @Override
+    public void setWorkstationPos(BlockPos pos) {
+        this.workstationPos = pos;
+    }
+
+    @Override
+    @Nullable
+    public BlockPos getWorkstationPos() {
+        return this.workstationPos;
+    }
 }

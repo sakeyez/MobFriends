@@ -1,7 +1,10 @@
 package com.sake.mobfriends.entity;
 
+import com.sake.mobfriends.MobFriends; // 【新增】
+import com.sake.mobfriends.block.WorkstationBlockEntity; // 【新增】
+import com.sake.mobfriends.entity.ai.ReturnToWorkstationGoal;
 import com.sake.mobfriends.trading.TradeManager;
-import net.minecraft.core.BlockPos;
+import net.minecraft.core.BlockPos; // 【新增】
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -30,9 +33,8 @@ import net.minecraft.world.item.trading.Merchant;
 import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.item.trading.MerchantOffers;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity; // 【新增】
 import org.jetbrains.annotations.NotNull;
-
-// 【【【新增导入：DataComponents】】】
 import net.minecraft.core.component.DataComponents;
 
 import javax.annotation.Nullable;
@@ -40,21 +42,16 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
 
-public class EndermanNpcEntity extends EnderMan implements Merchant {
+// 【修改】实现新接口
+public class EndermanNpcEntity extends EnderMan implements Merchant, IWorkstationNPC {
 
-
-    @Override
-    protected void registerGoals() {
-        // 添加基础AI
-
-        this.goalSelector.addGoal(1, new WaterAvoidingRandomStrollGoal(this, 1.0D)); // 随机漫步，并躲避水
-        this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 8.0F)); // 看向玩家
-        this.goalSelector.addGoal(8, new RandomLookAroundGoal(this)); // 随机环顾四周
-    }
     @Nullable
     private MerchantOffers offers;
     @Nullable
     private Player tradingPlayer;
+
+    // 【【【新增字段】】】
+    @Nullable private BlockPos workstationPos = null;
 
     private int teleportCooldown = 0;
     @Nullable
@@ -70,8 +67,15 @@ public class EndermanNpcEntity extends EnderMan implements Merchant {
                 .add(Attributes.MOVEMENT_SPEED, 0.3D);
     }
 
+    @Override
+    protected void registerGoals() {
+        this.goalSelector.addGoal(4, new WaterAvoidingRandomStrollGoal(this, 1.0D));
+        this.goalSelector.addGoal(3, new ReturnToWorkstationGoal(this, 16.0D, 1.0D));
+        this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 8.0F));
+        this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
+    }
 
-
+    // 【修改】添加NBT
     @Override
     public void addAdditionalSaveData(CompoundTag compound) {
         super.addAdditionalSaveData(compound);
@@ -79,8 +83,13 @@ public class EndermanNpcEntity extends EnderMan implements Merchant {
         if (this.playerToTeleport != null) {
             compound.putUUID("PlayerToTeleport", this.playerToTeleport);
         }
+        // 【新增】保存工作站位置
+        if (this.workstationPos != null) {
+            compound.putLong("WorkstationPos", this.workstationPos.asLong());
+        }
     }
 
+    // 【修改】添加NBT
     @Override
     public void readAdditionalSaveData(CompoundTag compound) {
         super.readAdditionalSaveData(compound);
@@ -90,8 +99,15 @@ public class EndermanNpcEntity extends EnderMan implements Merchant {
         } else {
             this.playerToTeleport = null;
         }
+        // 【新增】加载工作站位置
+        if (compound.contains("WorkstationPos")) {
+            this.workstationPos = BlockPos.of(compound.getLong("WorkstationPos"));
+        } else {
+            this.workstationPos = null;
+        }
     }
 
+    // (tick 保持不变)
     @Override
     public void tick() {
         super.tick();
@@ -134,7 +150,6 @@ public class EndermanNpcEntity extends EnderMan implements Merchant {
                                     100, 0.5, 0.5, 0.5, 0.1
                             );
 
-                            // 【【【修复 1： SoundSource.PLAYER -> SoundSource.PLAYERS】】】
                             deathLevel.playSound(null, pos, SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.0F, 1.0F);
                         }
                     }
@@ -144,32 +159,21 @@ public class EndermanNpcEntity extends EnderMan implements Merchant {
         }
     }
 
+    // (mobInteract 保持不变)
     @Override
     public @NotNull InteractionResult mobInteract(Player pPlayer, @NotNull InteractionHand pHand) {
         ItemStack playerStack = pPlayer.getItemInHand(pHand);
 
-        // 【【【修复 2： playerStack.isEdible() -> playerStack.get(DataComponents.FOOD) != null】】】
-        // 1. 检查玩家是否手持食物 且 NPC未处于冷却
         if (playerStack.get(DataComponents.FOOD) != null && this.teleportCooldown == 0) {
-
-            // 2. 仅在服务器端处理逻辑
             if (!this.level().isClientSide()) {
-
-                // 3. 检查玩家是否有死亡点
                 if (pPlayer.getLastDeathLocation().isEmpty()) {
                     return InteractionResult.FAIL;
                 }
-
-                // 4. 设置传送
-                this.teleportCooldown = 10; // 10 ticks = 0.5 秒
+                this.teleportCooldown = 10;
                 this.playerToTeleport = pPlayer.getUUID();
-
-                // 5. 消耗食物
                 if (!pPlayer.getAbilities().instabuild) {
                     playerStack.shrink(1);
                 }
-
-                // 6. 在末影人身上播放爱心粒子
                 ((ServerLevel)this.level()).sendParticles(
                         ParticleTypes.HEART,
                         this.getRandomX(1.0D),
@@ -177,16 +181,11 @@ public class EndermanNpcEntity extends EnderMan implements Merchant {
                         this.getRandomZ(1.0D),
                         7, 0.3, 0.3, 0.3, 0.05
                 );
-
-                // 7. 播放声音
                 this.playSound(SoundEvents.ENDERMAN_AMBIENT, 1.0F, 1.0F);
             }
-
-            // 8. 返回成功 (无论客户端还是服务端)
             return InteractionResult.sidedSuccess(this.level().isClientSide());
         }
 
-        // 【原版】交易逻辑 (如果上述条件不满足，则尝试交易)
         if (this.isAlive() && this.getTradingPlayer() == null) {
             if (pHand == InteractionHand.MAIN_HAND) {
                 if (!this.level().isClientSide()) {
@@ -200,8 +199,7 @@ public class EndermanNpcEntity extends EnderMan implements Merchant {
     }
 
 
-    // --- (以下交易逻辑保持不变) ---
-
+    // --- (交易逻辑) ---
     public void startTrading(Player pPlayer) {
         this.setTradingPlayer(pPlayer);
         this.openTradingScreen(pPlayer, this.getDisplayName());
@@ -232,13 +230,24 @@ public class EndermanNpcEntity extends EnderMan implements Merchant {
         return this.tradingPlayer;
     }
 
+    // 【【【修改：重写 GETOFFERS】】】
     @Override
     public MerchantOffers getOffers() {
-        if (this.offers == null) {
-            ResourceLocation entityId = BuiltInRegistries.ENTITY_TYPE.getKey(this.getType());
-            this.offers = TradeManager.getOffersFor(entityId);
+        if (this.level().isClientSide()) {
+            return new MerchantOffers();
         }
-        return this.offers;
+        if (this.workstationPos == null) {
+            MobFriends.LOGGER.warn("NPC {} 尚未绑定工作站，无法提供交易。", this.getUUID());
+            return new MerchantOffers();
+        }
+        BlockEntity be = this.level().getBlockEntity(this.workstationPos);
+        if (!(be instanceof WorkstationBlockEntity workstation)) {
+            MobFriends.LOGGER.warn("NPC {} 无法在 {} 找到其工作站实体。", this.getUUID(), this.workstationPos);
+            return new MerchantOffers();
+        }
+        int currentLevel = workstation.getNpcLevel() + 1;
+        ResourceLocation entityId = BuiltInRegistries.ENTITY_TYPE.getKey(this.getType());
+        return TradeManager.getOffersFor(entityId, currentLevel);
     }
 
     @Override
@@ -246,11 +255,20 @@ public class EndermanNpcEntity extends EnderMan implements Merchant {
         this.offers = pOffers;
     }
 
+
+
     @Override
     public void notifyTrade(@NotNull MerchantOffer pOffer) {
         pOffer.increaseUses();
         this.ambientSoundTime = -this.getAmbientSoundInterval();
-        this.playSound(SoundEvents.VILLAGER_YES, 1.0F, this.getVoicePitch());
+        // 【【【修复】】】
+        this.playSound(this.getNotifyTradeSound(), 1.0F, this.getVoicePitch());
+    }
+
+    @Override
+    public SoundEvent getNotifyTradeSound() {
+        // 【【【修复】】】
+        return SoundEvents.ENDERMAN_AMBIENT;
     }
 
     @Override
@@ -265,11 +283,23 @@ public class EndermanNpcEntity extends EnderMan implements Merchant {
     @Override
     public boolean showProgressBar() { return false; }
 
-    @Override
-    public SoundEvent getNotifyTradeSound() { return SoundEvents.VILLAGER_YES; }
+
 
     @Override
     public boolean isClientSide() { return this.level().isClientSide(); }
 
     public boolean canRestock() { return false; }
+
+    // --- 【【【新增：IWorkstationNPC 实现】】】 ---
+
+    @Override
+    public void setWorkstationPos(BlockPos pos) {
+        this.workstationPos = pos;
+    }
+
+    @Override
+    @Nullable
+    public BlockPos getWorkstationPos() {
+        return this.workstationPos;
+    }
 }

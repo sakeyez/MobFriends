@@ -33,7 +33,8 @@ public class MobFriends {
     public MobFriends(IEventBus modEventBus) {
         modEventBus.addListener(this::commonSetup);
         modEventBus.addListener(this::onRegisterPayloadHandlers);
-
+        ModBlocks.register(modEventBus);
+        ModBlockEntities.register(modEventBus);
         ModItems.register(modEventBus);
         ModEntities.register(modEventBus);
         ModCreativeTabs.register(modEventBus);

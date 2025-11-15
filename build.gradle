@@ -201,8 +201,12 @@ dependencies {
 
     implementation "curse.maven:create-328085:6641610"
     implementation "curse.maven:kaleidoscope-cookery-1309203:7057534"
-
+    implementation "curse.maven:lendercataclysm-551586:6906997"
+    implementation "curse.maven:lionfish-api-1001614:6168249"
+    implementation "curse.maven:curios-309927:6529130"
     implementation "curse.maven:aquaculture-60028:6357106"
+    implementation "curse.maven:mob-battle-mod-268746:6775003"
+
 
 
 }

@@ -15,6 +15,8 @@ public class CombatWitherModel extends HumanoidModel<CombatWither> {
      * 【最终动画修复 - 整体协调版】
      * 应用了为僵尸战士微调后的参数
      */
+
+
     @Override
     public void setupAnim(CombatWither pEntity, float pLimbSwing, float pLimbSwingAmount, float pAgeInTicks, float pNetHeadYaw, float pHeadPitch) {
         // 首先，运行父类的默认动画，这会设置好 this.riding 等状态
@@ -33,5 +35,29 @@ public class CombatWitherModel extends HumanoidModel<CombatWither> {
             this.leftLeg.xRot = -1.4F;       // 左腿抬起
             this.leftLeg.yRot = -0.4F;       // 左腿向外分开
         }
+        int attackAnimTicks = pEntity.getAttackAnimTicks();
+        if (attackAnimTicks > 0) {
+            // pAgeInTicks 是用于平滑过渡的“部分刻”
+            // (10 - 剩余ticks + 部分刻) / 10.0F
+            float attackProgress = (10.0F - (float) attackAnimTicks + pAgeInTicks) / 10.0F;
+            if (attackProgress <= 1.0F) {
+                // 调用辅助方法来挥舞右臂
+                this.attackAnimation(attackProgress);
+            }
+        }
+    }
+    protected void attackAnimation(float pAttackTime) {
+        if (pAttackTime > 0.0F) {
+            float f = 1.0F - pAttackTime;
+            f *= f;
+            f *= f;
+            f = 1.0F - f;
+            float f1 = (float)Math.sin((double)(f * (float)Math.PI));
+            float f2 = (float)Math.sin((double)(pAttackTime * (float)Math.PI)) * -(this.head.xRot - 0.7F) * 0.75F;
+            this.rightArm.xRot = (float)((double)this.rightArm.xRot - ((double)f1 * 1.2D + (double)f2));
+            this.rightArm.yRot += this.body.yRot * 2.0F;
+            this.rightArm.zRot += (float)Math.sin((double)(pAttackTime * (float)Math.PI)) * -0.4F;
+        }
     }
 }
+
